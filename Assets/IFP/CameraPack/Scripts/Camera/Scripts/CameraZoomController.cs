@@ -77,11 +77,41 @@ namespace IFC.Camera
                 switch (zoomType)
                 {
                     case ZoomType.DistanceStepUpdate:
-                        return targetDistanceStep;
+                        float minDistance = distanceSteps[0];
+                        float maxDistance = distanceSteps[distanceSteps.Length - 1];
+                        return (maxDistance - minDistance);
                     case ZoomType.FOVStepUpdate:
                         return targetFovStep;
                 }
                 return -1;
+            }
+        }
+
+        Vector3 targetHitPoint
+        {
+            get
+            {
+                Ray ray = new Ray(camera.transform.position, camera.transform.forward);
+                RaycastHit hit;
+                if (Physics.Raycast(ray, out hit, 100, 1 << LayerMask.NameToLayer(terrainLayerName)))
+                {
+                    Debug.DrawLine(ray.origin, hit.point, Color.green);
+                    return hit.point;
+                }
+                else
+                {
+                    Debug.DrawLine(ray.origin, ray.direction + camera.transform.forward * 100, Color.red);
+                }
+                return Vector3.zero;
+            }
+        }
+
+
+        private float cameraDistance
+        {
+            get
+            {
+                return Vector3.Distance(camera.transform.localPosition, targetHitPoint);
             }
         }
 
@@ -130,11 +160,12 @@ namespace IFC.Camera
             camera.fieldOfView = fovSteps[defaultFovStep];
         }
 
+
+
         void UpdateDistanceStep()
         {
             float zoomDelta = CameraInputManager.Instance.GetZoomInputDelta();
-            Vector3 targetPoint = GetTargetHitPoint();
-            float distance = Vector3.Distance(camera.transform.localPosition, targetPoint);
+            Vector3 targetHitPoint = this.targetHitPoint;
 
             if (currentDistanceStep == targetDistanceStep)
             {
@@ -151,31 +182,31 @@ namespace IFC.Camera
                 targetDistanceStep = Mathf.Clamp(targetDistanceStep, 0, distanceSteps.Length - 1);
             }
 
-            if (distance != distanceSteps[targetDistanceStep])
+            if (cameraDistance != distanceSteps[targetDistanceStep])
             {
                 camera.fieldOfView = Mathf.Lerp(camera.fieldOfView, fovSteps[targetFovStep], fovUpdateSpeed * Time.deltaTime);
                 int zoomDirection = currentDistanceStep > targetDistanceStep ? 1 : -1;
 
                 // zooomDirection correction 
-                if (currentDistanceStep > targetDistanceStep && distance < distanceSteps[targetDistanceStep])
+                if (currentDistanceStep > targetDistanceStep && cameraDistance < distanceSteps[targetDistanceStep])
                 {
                     zoomDirection = -1; // reverse zoom direction
                 }
-                if (currentDistanceStep < targetDistanceStep && distance > distanceSteps[targetDistanceStep])
+                if (currentDistanceStep < targetDistanceStep && cameraDistance > distanceSteps[targetDistanceStep])
                 {
                     zoomDirection = 1; // reverse zoom direction
                 }
 
                 float distanceDelta = Time.deltaTime * distanceUpdateSpeed * zoomDirection;
-                Vector3 localPosition = Vector3.MoveTowards(camera.transform.localPosition, targetPoint, distanceDelta);
+                Vector3 localPosition = Vector3.MoveTowards(camera.transform.localPosition, targetHitPoint, distanceDelta);
                 float minDistance = distanceSteps[targetDistanceStep] >= distanceSteps[currentDistanceStep] ?
                     distanceSteps[currentDistanceStep] : distanceSteps[targetDistanceStep];
                 float maxDistance = distanceSteps[targetDistanceStep] >= distanceSteps[currentDistanceStep] ?
                     distanceSteps[targetDistanceStep] : distanceSteps[currentDistanceStep];
-                camera.transform.localPosition = ClampVector3(localPosition, targetPoint, minDistance, maxDistance);
+                camera.transform.localPosition = ClampVector3(localPosition, targetHitPoint, minDistance, maxDistance);
             }
 
-            if (Mathf.Abs(distance - distanceSteps[targetDistanceStep]) <= distanceTolerance)
+            if (Mathf.Abs(cameraDistance - distanceSteps[targetDistanceStep]) <= distanceTolerance)
             {
                 currentDistanceStep = targetDistanceStep;
             }
@@ -205,15 +236,15 @@ namespace IFC.Camera
 
         void DistanceClampedUpdate()
         {
-            Vector3 targetPoint = GetTargetHitPoint();
+            Vector3 targetHitPoint = this.targetHitPoint;
             if (cameraZoomDelta == 0) return;
 
-            float distance = Vector3.Distance(camera.transform.localPosition, targetPoint);
+            float distance = Vector3.Distance(camera.transform.localPosition, targetHitPoint);
             if ((distance > distanceMininum && cameraZoomDelta > 0) || (distance < distanceMaximum && cameraZoomDelta < 0))
             {
                 float distanceDelta = cameraZoomDelta * Time.deltaTime * distanceUpdateSpeed;
-                Vector3 localPosition = Vector3.MoveTowards(camera.transform.localPosition, targetPoint, distanceDelta);
-                camera.transform.localPosition = ClampVector3(localPosition, targetPoint, distanceMininum, distanceMaximum);
+                Vector3 localPosition = Vector3.MoveTowards(camera.transform.localPosition, targetHitPoint, distanceDelta);
+                camera.transform.localPosition = ClampVector3(localPosition, targetHitPoint, distanceMininum, distanceMaximum);
             }
         }
 
@@ -233,22 +264,6 @@ namespace IFC.Camera
                 return targetPosition + direction * maxDistance;
             }
             return localPosition;
-        }
-
-        Vector3 GetTargetHitPoint()
-        {
-            Ray ray = new Ray(camera.transform.position, camera.transform.forward);
-            RaycastHit hit;
-            if (Physics.Raycast(ray, out hit, 100, 1 << LayerMask.NameToLayer(terrainLayerName)))
-            {
-                Debug.DrawLine(ray.origin, hit.point, Color.green);
-                return hit.point;
-            }
-            else
-            {
-                Debug.DrawLine(ray.origin, ray.direction + camera.transform.forward * 100, Color.red);
-            }
-            return Vector3.zero;
         }
 
         void UpdateFovStep()
