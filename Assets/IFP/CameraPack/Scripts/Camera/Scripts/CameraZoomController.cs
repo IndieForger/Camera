@@ -107,7 +107,7 @@ namespace IFC.Camera
         }
 
 
-        private float cameraDistance
+        private float distanceToHitPoint
         {
             get
             {
@@ -166,48 +166,36 @@ namespace IFC.Camera
         {
             float zoomDelta = CameraInputManager.Instance.GetZoomInputDelta();
             Vector3 targetHitPoint = this.targetHitPoint;
+            int currentStep = currentDistanceStep;
+            int targetStep = targetDistanceStep;
+            int zoomDirection = 0;  // 1 -> zooming in, -1 -> zooming out
 
-            if (currentDistanceStep == targetDistanceStep)
+            if (currentStep == targetStep) 
             {
-                if (zoomDelta < 0)
-                {
-                    targetDistanceStep++;
+                if (zoomDelta == 0) {
+                    return;
                 }
-
-                if (zoomDelta > 0)
-                {
-                    targetDistanceStep--;
-                }
-
-                targetDistanceStep = Mathf.Clamp(targetDistanceStep, 0, distanceSteps.Length - 1);
+                zoomDirection = zoomDelta > 0 ? 1 : -1;                
+                targetStep = Mathf.Clamp(targetStep - zoomDirection, 0, distanceSteps.Length - 1);                
+                this.targetDistanceStep = targetStep;
+                return;
+            }        
+            
+            zoomDirection = currentStep > targetStep ? 1 : -1;    
+  
+            // todo: consider calculating it based on zoom speed
+            float distanceDelta = Time.deltaTime * distanceUpdateSpeed;
+            
+            if (zoomDirection > 0 && this.distanceToHitPoint - distanceDelta < distanceSteps[targetStep]) {                
+                distanceDelta = this.distanceToHitPoint - distanceSteps[targetStep];
             }
 
-            if (cameraDistance != distanceSteps[targetDistanceStep])
-            {
-                camera.fieldOfView = Mathf.Lerp(camera.fieldOfView, fovSteps[targetFovStep], fovUpdateSpeed * Time.deltaTime);
-                int zoomDirection = currentDistanceStep > targetDistanceStep ? 1 : -1;
-
-                // zooomDirection correction 
-                if (currentDistanceStep > targetDistanceStep && cameraDistance < distanceSteps[targetDistanceStep])
-                {
-                    zoomDirection = -1; // reverse zoom direction
-                }
-                if (currentDistanceStep < targetDistanceStep && cameraDistance > distanceSteps[targetDistanceStep])
-                {
-                    zoomDirection = 1; // reverse zoom direction
-                }
-
-                float distanceDelta = Time.deltaTime * distanceUpdateSpeed * zoomDirection;
-                Vector3 localPosition = Vector3.MoveTowards(camera.transform.localPosition, targetHitPoint, distanceDelta);
-                float minDistance = distanceSteps[targetDistanceStep] >= distanceSteps[currentDistanceStep] ?
-                    distanceSteps[currentDistanceStep] : distanceSteps[targetDistanceStep];
-                float maxDistance = distanceSteps[targetDistanceStep] >= distanceSteps[currentDistanceStep] ?
-                    distanceSteps[targetDistanceStep] : distanceSteps[currentDistanceStep];
-                camera.transform.localPosition = ClampVector3(localPosition, targetHitPoint, minDistance, maxDistance);
+            if (zoomDirection < 0 && this.distanceToHitPoint + distanceDelta > distanceSteps[targetStep]) {
+                distanceDelta = distanceSteps[targetStep] - this.distanceToHitPoint;
             }
-
-            if (Mathf.Abs(cameraDistance - distanceSteps[targetDistanceStep]) <= distanceTolerance)
-            {
+        
+            camera.transform.localPosition = Vector3.MoveTowards(camera.transform.localPosition, targetHitPoint, distanceDelta * zoomDirection);
+            if (Mathf.Abs(distanceToHitPoint - distanceSteps[targetDistanceStep]) <= distanceTolerance) {
                 currentDistanceStep = targetDistanceStep;
             }
 
@@ -244,25 +232,26 @@ namespace IFC.Camera
             {
                 float distanceDelta = cameraZoomDelta * Time.deltaTime * distanceUpdateSpeed;
                 Vector3 localPosition = Vector3.MoveTowards(camera.transform.localPosition, targetHitPoint, distanceDelta);
-                camera.transform.localPosition = ClampVector3(localPosition, targetHitPoint, distanceMininum, distanceMaximum);
+                camera.transform.localPosition = ClampDistance(localPosition, targetHitPoint, distanceMininum, distanceMaximum);
             }
         }
 
-        Vector3 ClampVector3(Vector3 localPosition, Vector3 targetPosition, float minDistance, float maxDistance)
+        Vector3 ClampDistance(Vector3 localPosition, Vector3 targetPosition, float minDistance, float maxDistance)
         {
             float distance = Vector3.Distance(localPosition, targetPosition);
-            Vector3 heading = localPosition - targetPosition;
-            Vector3 direction = heading / distance;
+            Vector3 heading = localPosition - targetPosition;            
+            Vector3 direction = heading.normalized;
 
-            if (distance < minDistance)
+            if (distance <= minDistance)
             {
                 return targetPosition + direction * minDistance;
             }
 
-            if (distance > maxDistance)
+            if (distance >= maxDistance)
             {
                 return targetPosition + direction * maxDistance;
             }
+
             return localPosition;
         }
 
