@@ -9,8 +9,8 @@ namespace IFC.Camera
         public enum ZoomType { DistanceFreeUpdate, DistanceClampedUpdate, DistanceStepUpdate, FOVStepUpdate }
         public ZoomType zoomType = ZoomType.DistanceClampedUpdate;
 
-        // distance update properties
-        public string terrainLayerName = "Terrain";
+        // distance update properties        
+        public LayerMask layerMask;
         public float[] distanceSteps = { 5, 10, 40, 60 };
         public float distanceTolerance = 0.5f;
         public float distanceUpdateSpeed = 50; // the zoom speed multiplier   
@@ -93,13 +93,11 @@ namespace IFC.Camera
             {
                 Ray ray = new Ray(camera.transform.position, camera.transform.forward);
                 RaycastHit hit;
-                if (Physics.Raycast(ray, out hit, 100, 1 << LayerMask.NameToLayer(terrainLayerName)))
-                {
+                //if (Physics.Raycast(ray, out hit, 100, 1 << LayerMask.NameToLayer(layerMask)))
+                if (Physics.Raycast(ray, out hit, 100, 1 << layerMask )) {
                     Debug.DrawLine(ray.origin, hit.point, Color.green);
                     return hit.point;
-                }
-                else
-                {
+                } else {
                     Debug.DrawLine(ray.origin, ray.direction + camera.transform.forward * 100, Color.red);
                 }
                 return Vector3.zero;
