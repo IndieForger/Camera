@@ -6,8 +6,8 @@ namespace IFC.Camera
 {
     public class CameraZoomController : CameraBaseController
     {
-        public enum ZoomType { DistanceFreeUpdate, DistanceClampedUpdate, DistanceStepUpdate, FOVStepUpdate }
-        public ZoomType zoomType = ZoomType.DistanceClampedUpdate;
+        public enum UpdateMethod { DistanceFreeUpdate, DistanceClampedUpdate, DistanceStepUpdate, FOVStepUpdate }
+        public UpdateMethod updateMethod = UpdateMethod.DistanceClampedUpdate;
 
         // distance update properties        
         public LayerMask layerMask;
@@ -38,11 +38,11 @@ namespace IFC.Camera
         {
             get
             {
-                switch (zoomType)
+                switch (updateMethod)
                 {
-                    case ZoomType.DistanceStepUpdate:
+                    case UpdateMethod.DistanceStepUpdate:
                         return currentDistanceStep;
-                    case ZoomType.FOVStepUpdate:
+                    case UpdateMethod.FOVStepUpdate:
                         return currentFovStep;
                 }
                 return -1;
@@ -56,11 +56,11 @@ namespace IFC.Camera
         {
             get
             {
-                switch (zoomType)
+                switch (updateMethod)
                 {
-                    case ZoomType.DistanceStepUpdate:
+                    case UpdateMethod.DistanceStepUpdate:
                         return targetDistanceStep;
-                    case ZoomType.FOVStepUpdate:
+                    case UpdateMethod.FOVStepUpdate:
                         return targetFovStep;
                 }
                 return -1;
@@ -74,13 +74,13 @@ namespace IFC.Camera
         {
             get
             {
-                switch (zoomType)
+                switch (updateMethod)
                 {
-                    case ZoomType.DistanceStepUpdate:
+                    case UpdateMethod.DistanceStepUpdate:
                         float minDistance = distanceSteps[0];
                         float maxDistance = distanceSteps[distanceSteps.Length - 1];
                         return (maxDistance - minDistance);
-                    case ZoomType.FOVStepUpdate:
+                    case UpdateMethod.FOVStepUpdate:
                         return targetFovStep;
                 }
                 return -1;
@@ -124,18 +124,18 @@ namespace IFC.Camera
         void Update()
         {
             cameraZoomDelta = CameraInputManager.Instance.GetZoomInputDelta();
-            switch (zoomType)
+            switch (updateMethod)
             {
-                case ZoomType.FOVStepUpdate:
+                case UpdateMethod.FOVStepUpdate:
                     UpdateFovStep();
                     break;
-                case ZoomType.DistanceStepUpdate:
+                case UpdateMethod.DistanceStepUpdate:
                     UpdateDistanceStep();
                     break;
-                case ZoomType.DistanceClampedUpdate:
+                case UpdateMethod.DistanceClampedUpdate:
                     DistanceClampedUpdate();
                     break;
-                case ZoomType.DistanceFreeUpdate:
+                case UpdateMethod.DistanceFreeUpdate:
                     DistanceFreeUpdate();
                     break;
             }
