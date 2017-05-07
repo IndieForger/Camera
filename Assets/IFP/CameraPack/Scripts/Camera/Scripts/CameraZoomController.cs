@@ -12,8 +12,9 @@ namespace IFC.Camera
         // distance update properties        
         public LayerMask layerMask;
         public float[] distanceSteps = { 5, 10, 40, 60 };
+        public float distanceStepTime = 1;      // time between steps
         public float distanceTolerance = 0.5f;
-        public float distanceUpdateSpeed = 50; // the zoom speed multiplier   
+        public float distanceUpdateSpeed = 50; // the zoom speed multiplier ( ignored for step based update )   
         public float distanceMininum = 5; // min limit value(distance between camera and focuspoint)
         public float distanceMaximum = 20; // max limit value(distance between camera and focuspoint)
 
@@ -141,11 +142,6 @@ namespace IFC.Camera
             }
         }
 
-        void SetupDistance()
-        {
-
-        }
-
         void SetupFOV()
         {
             if (defaultFovStep > fovSteps.Length - 1 || defaultFovStep < 0)
@@ -157,8 +153,6 @@ namespace IFC.Camera
             targetFovStep = currentFovStep;
             camera.fieldOfView = fovSteps[defaultFovStep];
         }
-
-
 
         void UpdateDistanceStep()
         {
@@ -173,16 +167,14 @@ namespace IFC.Camera
                 if (zoomDelta == 0) {
                     return;
                 }
-                zoomDirection = zoomDelta > 0 ? 1 : -1;                
+                zoomDirection = zoomDelta > 0 ? 1 : -1;
                 targetStep = Mathf.Clamp(targetStep - zoomDirection, 0, distanceSteps.Length - 1);                
                 this.targetDistanceStep = targetStep;
                 return;
-            }        
-            
-            zoomDirection = currentStep > targetStep ? 1 : -1;    
-  
-            // todo: consider calculating it based on zoom speed
-            float distanceDelta = Time.deltaTime * distanceUpdateSpeed;
+            }
+
+            float distanceDelta = Mathf.Abs(distanceSteps[currentStep] - distanceSteps[targetStep]) / distanceStepTime * Time.deltaTime;
+            zoomDirection = currentStep > targetStep ? 1 : -1;
             
             if (zoomDirection > 0 && this.distanceToHitPoint - distanceDelta < distanceSteps[targetStep]) {                
                 distanceDelta = this.distanceToHitPoint - distanceSteps[targetStep];
@@ -196,7 +188,6 @@ namespace IFC.Camera
             if (Mathf.Abs(distanceToHitPoint - distanceSteps[targetDistanceStep]) <= distanceTolerance) {
                 currentDistanceStep = targetDistanceStep;
             }
-
         }
 
         void DistanceFreeUpdate()
