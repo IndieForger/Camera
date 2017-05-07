@@ -12,11 +12,12 @@ namespace IFC.Camera
         // distance update properties        
         public LayerMask layerMask;
         public float[] distanceSteps = { 5, 10, 40, 60 };
-        public float distanceStepTime = 1;      // time between steps
-        public float distanceTolerance = 0.5f;
-        public float distanceUpdateSpeed = 50; // the zoom speed multiplier ( ignored for step based update )   
-        public float distanceMininum = 5; // min limit value(distance between camera and focuspoint)
-        public float distanceMaximum = 20; // max limit value(distance between camera and focuspoint)
+        public float stepTime = 1;      // time between steps
+        public int defaultStep = 0;
+        public float distanceSnapDelta = 0.5f;
+        public float distanceUpdateDelta = 50; // the zoom speed multiplier ( ignored for step based update )   
+        public float minDistance = 5; // min limit value(distance between camera and focuspoint)
+        public float maxDistance = 20; // max limit value(distance between camera and focuspoint)
 
         private int currentDistanceStep;
         private int targetDistanceStep;
@@ -24,8 +25,8 @@ namespace IFC.Camera
         // fov update properties
         public float[] fovSteps = { 5, 20, 60, 80 };
         public int defaultFovStep = 2;
-        public float fovTolerance = 0.1f;
-        public float fovUpdateSpeed = 20;
+        public float fovStanpDelta = 0.1f;
+        public float fovUpdateDelta = 20;
 
         private int currentFovStep;
         private int targetFovStep;
@@ -120,6 +121,11 @@ namespace IFC.Camera
         void Start()
         {
             SetupFOV();
+            switch (updateMethod) {                
+                case UpdateMethod.DistanceStepUpdate:
+                    InitDistanceStep();
+                    break;
+            }
         }
 
         void Update()
@@ -154,6 +160,20 @@ namespace IFC.Camera
             camera.fieldOfView = fovSteps[defaultFovStep];
         }
 
+        void InitDistanceStep()
+        {
+            targetDistanceStep = defaultStep;
+            float closestDistance = distanceToHitPoint;
+            int step = currentDistanceStep  = 0;
+            foreach (float distance in distanceSteps) {
+                if (Mathf.Abs(distanceToHitPoint - distance) < closestDistance) {
+                    closestDistance = distance;
+                    currentDistanceStep = step;
+                }
+                step++;
+            }
+        }
+
         void UpdateDistanceStep()
         {
             float zoomDelta = CameraInputManager.Instance.GetZoomInputDelta();
@@ -173,7 +193,7 @@ namespace IFC.Camera
                 return;
             }
 
-            float distanceDelta = Mathf.Abs(distanceSteps[currentStep] - distanceSteps[targetStep]) / distanceStepTime * Time.deltaTime;
+            float distanceDelta = Mathf.Abs(distanceSteps[currentStep] - distanceSteps[targetStep]) / stepTime * Time.deltaTime;
             zoomDirection = currentStep > targetStep ? 1 : -1;
             
             if (zoomDirection > 0 && this.distanceToHitPoint - distanceDelta < distanceSteps[targetStep]) {                
@@ -185,7 +205,7 @@ namespace IFC.Camera
             }
         
             camera.transform.localPosition = Vector3.MoveTowards(camera.transform.localPosition, targetHitPoint, distanceDelta * zoomDirection);
-            if (Mathf.Abs(distanceToHitPoint - distanceSteps[targetDistanceStep]) <= distanceTolerance) {
+            if (Mathf.Abs(distanceToHitPoint - distanceSteps[targetDistanceStep]) <= distanceSnapDelta) {
                 currentDistanceStep = targetDistanceStep;
             }
         }
@@ -203,7 +223,7 @@ namespace IFC.Camera
                 ? targetPoint - camera.transform.position
                 : camera.transform.position - targetPoint;
             //Vector3 direction = heading / distance;
-            float distanceDelta = Time.deltaTime * distanceUpdateSpeed;
+            float distanceDelta = Time.deltaTime * this.distanceUpdateDelta;
             if (manager.GetSpecial1())
             {
                 distanceDelta *= 10;
@@ -217,11 +237,11 @@ namespace IFC.Camera
             if (cameraZoomDelta == 0) return;
 
             float distance = Vector3.Distance(camera.transform.localPosition, targetHitPoint);
-            if ((distance > distanceMininum && cameraZoomDelta > 0) || (distance < distanceMaximum && cameraZoomDelta < 0))
+            if ((distance > minDistance && cameraZoomDelta > 0) || (distance < maxDistance && cameraZoomDelta < 0))
             {
-                float distanceDelta = cameraZoomDelta * Time.deltaTime * distanceUpdateSpeed;
+                float distanceDelta = cameraZoomDelta * Time.deltaTime * this.distanceUpdateDelta;
                 Vector3 localPosition = Vector3.MoveTowards(camera.transform.localPosition, targetHitPoint, distanceDelta);
-                camera.transform.localPosition = ClampDistance(localPosition, targetHitPoint, distanceMininum, distanceMaximum);
+                camera.transform.localPosition = ClampDistance(localPosition, targetHitPoint, minDistance, maxDistance);
             }
         }
 
@@ -264,14 +284,14 @@ namespace IFC.Camera
 
             if (camera.fieldOfView != fovSteps[targetFovStep])
             {
-                camera.fieldOfView = Mathf.Lerp(camera.fieldOfView, fovSteps[targetFovStep], fovUpdateSpeed * Time.deltaTime);
+                camera.fieldOfView = Mathf.Lerp(camera.fieldOfView, fovSteps[targetFovStep], fovUpdateDelta * Time.deltaTime);
 
                 float fovMin = fovSteps[targetFovStep] >= fovSteps[currentFovStep] ? fovSteps[currentFovStep] : fovSteps[targetFovStep];
                 float fovMax = fovSteps[targetFovStep] >= fovSteps[currentFovStep] ? fovSteps[targetFovStep] : fovSteps[currentFovStep];
                 camera.fieldOfView = Mathf.Clamp(camera.fieldOfView, fovMin, fovMax);
             }
 
-            if (Mathf.Abs(camera.fieldOfView - fovSteps[targetFovStep]) <= fovTolerance)
+            if (Mathf.Abs(camera.fieldOfView - fovSteps[targetFovStep]) <= fovStanpDelta)
             {
                 currentFovStep = targetFovStep;
             }
