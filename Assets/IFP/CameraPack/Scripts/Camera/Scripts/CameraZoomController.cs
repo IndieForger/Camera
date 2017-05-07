@@ -95,8 +95,7 @@ namespace IFC.Camera
             {
                 Ray ray = new Ray(camera.transform.position, camera.transform.forward);
                 RaycastHit hit;
-                //if (Physics.Raycast(ray, out hit, 100, 1 << LayerMask.NameToLayer(layerMask)))
-                if (Physics.Raycast(ray, out hit, 100, 1 << layerMask )) {
+                if (Physics.Raycast(ray, out hit, 100, layerMask )) {
                     Debug.DrawLine(ray.origin, hit.point, Color.green);
                     return hit.point;
                 } else {
