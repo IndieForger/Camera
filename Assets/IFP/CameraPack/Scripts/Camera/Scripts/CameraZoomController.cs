@@ -94,12 +94,13 @@ namespace IFC.Camera
             get
             {
                 Ray ray = new Ray(camera.transform.position, camera.transform.forward);
+                float maxDistance = 1000;
                 RaycastHit hit;
-                if (Physics.Raycast(ray, out hit, 100, layerMask )) {
+                if (Physics.Raycast(ray, out hit, maxDistance, layerMask )) {
                     Debug.DrawLine(ray.origin, hit.point, Color.green);
                     return hit.point;
                 } else {
-                    Debug.DrawLine(ray.origin, ray.direction + camera.transform.forward * 100, Color.red);
+                    Debug.DrawLine(ray.origin, Vector3.zero, Color.red);
                 }
                 return Vector3.zero;
             }
