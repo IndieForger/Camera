@@ -6,6 +6,15 @@ namespace IFC.Camera
 {
     public class CameraZoomController : CameraBaseController
     {
+        // triggered when started
+        public delegate Event ZoomStartedHandler();
+        public ZoomStartedHandler ZoomStarted;
+        public delegate Event ZoomUpdatedHandler(float progress);
+        public ZoomUpdatedHandler ZoomUpdated;        
+        public delegate Event ZoomCompletedHandler();
+        public ZoomCompletedHandler ZoomCompleted;
+
+
         public enum UpdateMethod { DistanceFreeUpdate, DistanceClampedUpdate, DistanceStepUpdate, FOVStepUpdate }
         public UpdateMethod updateMethod = UpdateMethod.DistanceClampedUpdate;
 
@@ -16,8 +25,8 @@ namespace IFC.Camera
         public int defaultStep = 0;
         public float distanceSnapDelta = 0.5f;
         public float distanceUpdateDelta = 50; // the zoom speed multiplier ( ignored for step based update )   
-        public float minDistance = 5; // min limit value(distance between camera and focuspoint)
-        public float maxDistance = 20; // max limit value(distance between camera and focuspoint)
+        public float minDistance = 50; // min limit value(distance between camera and focuspoint)
+        public float maxDistance = 100; // max limit value(distance between camera and focuspoint)
 
         private int currentDistanceStep;
         private int targetDistanceStep;
@@ -131,6 +140,10 @@ namespace IFC.Camera
         void Update()
         {
             cameraZoomDelta = CameraInputManager.Instance.GetZoomInputDelta();
+            if (cameraZoomDelta != 0) {
+                TriggerZoomStarted();
+            };
+
             switch (updateMethod)
             {
                 case UpdateMethod.FOVStepUpdate:
@@ -145,6 +158,41 @@ namespace IFC.Camera
                 case UpdateMethod.DistanceFreeUpdate:
                     DistanceFreeUpdate();
                     break;
+            }
+        }
+
+        /// <summary>
+        /// Triggered when zoom has started
+        /// </summary>
+        protected void TriggerZoomStarted()
+        {
+            //Debug.Log("----- START");
+            if (ZoomStarted != null) {              
+                ZoomStarted();
+            }
+        }
+
+        /// <summary>
+        /// Triggered for every zoom update passing progress delta.
+        /// TriggerZoomUpdated is called with different value for each zoom update type.
+        /// </summary>
+        /// <param name="progress">Progress delta</param>
+        protected void TriggerZoomUpdated(float progress)
+        {
+            //Debug.Log("----- " + progress);
+            if (ZoomUpdated != null) {
+                ZoomUpdated(progress);
+            }
+        }
+
+        /// <summary>
+        /// Trigger when zoom has completed
+        /// </summary>
+        protected void TriggerCompleted()
+        {
+            //Debug.Log("----- END");
+            if (ZoomCompleted != null) {
+                ZoomCompleted();
             }
         }
 
@@ -205,8 +253,15 @@ namespace IFC.Camera
             }
         
             camera.transform.localPosition = Vector3.MoveTowards(camera.transform.localPosition, targetHitPoint, distanceDelta * zoomDirection);
+
+            float distDiff = Mathf.Abs(this.distanceToHitPoint - distanceSteps[targetStep]);
+            float distStep = Mathf.Abs(distanceSteps[targetStep] - distanceSteps[currentStep]);
+            float progress = Mathf.Clamp(1 - (distDiff / distStep), 0, 1);
+            TriggerZoomUpdated(progress);            
+
             if (Mathf.Abs(distanceToHitPoint - distanceSteps[targetDistanceStep]) <= distanceSnapDelta) {
                 currentDistanceStep = targetDistanceStep;
+                TriggerCompleted();
             }
         }
 
@@ -222,13 +277,14 @@ namespace IFC.Camera
             Vector3 heading = cameraZoomDelta > 0
                 ? targetPoint - camera.transform.position
                 : camera.transform.position - targetPoint;
-            //Vector3 direction = heading / distance;
             float distanceDelta = Time.deltaTime * this.distanceUpdateDelta;
             if (manager.GetSpecial1())
             {
                 distanceDelta *= 10;
             }
             camera.transform.position = Vector3.MoveTowards(camera.transform.position, camera.transform.position + heading, distanceDelta);
+            TriggerZoomUpdated(distanceDelta);
+            TriggerCompleted();
         }
 
         void DistanceClampedUpdate()
@@ -237,12 +293,18 @@ namespace IFC.Camera
             if (cameraZoomDelta == 0) return;
 
             float distance = Vector3.Distance(camera.transform.localPosition, targetHitPoint);
-            if ((distance > minDistance && cameraZoomDelta > 0) || (distance < maxDistance && cameraZoomDelta < 0))
-            {
+            if ((distance > minDistance && cameraZoomDelta > 0) || (distance < maxDistance && cameraZoomDelta < 0)) {
                 float distanceDelta = cameraZoomDelta * Time.deltaTime * this.distanceUpdateDelta;
                 Vector3 localPosition = Vector3.MoveTowards(camera.transform.localPosition, targetHitPoint, distanceDelta);
                 camera.transform.localPosition = ClampDistance(localPosition, targetHitPoint, minDistance, maxDistance);
             }
+
+            float distDiff = Mathf.Abs(this.distanceToHitPoint - minDistance);
+            float distStep = Mathf.Abs(maxDistance - minDistance);
+            float progress = Mathf.Clamp(1 - (distDiff / distStep), 0, 1);
+            TriggerZoomUpdated(progress);
+
+            TriggerCompleted();
         }
 
         Vector3 ClampDistance(Vector3 localPosition, Vector3 targetPosition, float minDistance, float maxDistance)
@@ -289,11 +351,19 @@ namespace IFC.Camera
                 float fovMin = fovSteps[targetFovStep] >= fovSteps[currentFovStep] ? fovSteps[currentFovStep] : fovSteps[targetFovStep];
                 float fovMax = fovSteps[targetFovStep] >= fovSteps[currentFovStep] ? fovSteps[targetFovStep] : fovSteps[currentFovStep];
                 camera.fieldOfView = Mathf.Clamp(camera.fieldOfView, fovMin, fovMax);
+
+                float fovDiff = Mathf.Abs(camera.fieldOfView - fovSteps[targetStep]);
+                float fovStep = Mathf.Abs(fovSteps[targetStep] - fovSteps[currentStep]);
+                float progress = Mathf.Clamp(1 - (fovDiff / fovStep), 0, 1);
+                TriggerZoomUpdated(progress);
             }
 
             if (Mathf.Abs(camera.fieldOfView - fovSteps[targetFovStep]) <= fovStanpDelta)
             {
                 currentFovStep = targetFovStep;
+                if (ZoomCompleted != null) {
+                    ZoomCompleted();
+                }
             }
         }
     }
