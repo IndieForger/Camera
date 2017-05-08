@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
-using IFC.Helpers;
+using IFP.Helpers;
 
-namespace IFC.Camera
+namespace IFP.Camera
 {
 
     public class CameraInputManager : MonoSingleton<CameraInputManager>

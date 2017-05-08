@@ -2,7 +2,7 @@
 using System.Collections;
 
 // rotates camera with mouse right click
-namespace IFC.Camera
+namespace IFP.Camera
 {
     public class CameraRotationController : CameraBaseController
     {

@@ -1,7 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using IFC.Camera;
+using IFP.Camera;
 
 public class PlaneAdjuster : MonoBehaviour {
 

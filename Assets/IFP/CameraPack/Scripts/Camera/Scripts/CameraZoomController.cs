@@ -2,7 +2,7 @@
 using System.Collections;
 
 // rotates camera with scroller
-namespace IFC.Camera
+namespace IFP.Camera
 {
     public class CameraZoomController : CameraBaseController
     {

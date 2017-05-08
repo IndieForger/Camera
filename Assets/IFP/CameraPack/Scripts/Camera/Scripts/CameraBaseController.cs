@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 using System.Collections;
-namespace IFC.Camera
+namespace IFP.Camera
 {
     public class CameraBaseController : MonoBehaviour
     {

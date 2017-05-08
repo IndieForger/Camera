@@ -3,7 +3,7 @@
 using UnityEngine;
 //using Extensions;
 
-namespace IFC.Helpers
+namespace IFP.Helpers
 {
 
     /// <summary>
