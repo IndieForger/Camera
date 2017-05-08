@@ -52,10 +52,6 @@ public class PlaneAdjuster : MonoBehaviour {
 
         float zoomDirection = zoomCtrl.currentStep > zoomCtrl.targetStep ? 1 : -1;
 
-        if (step == 2) {
-            Debug.Log("c: " + zoomCtrl.currentStep + ", n: " + zoomCtrl.targetStep + ", dir: " + zoomDirection);
-        }
-
         bool isCurrent = zoomCtrl.currentStep == step;
         bool zoomingIn = isCurrent && zoomDirection > 0;
         bool zoomingOut = zoomDirection < 0;
