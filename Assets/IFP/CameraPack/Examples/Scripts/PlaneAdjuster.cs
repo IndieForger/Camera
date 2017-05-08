@@ -41,9 +41,8 @@ public class PlaneAdjuster : MonoBehaviour {
     void ZoomUpdated(float progress)
     {
         if (!shouldZoom) return;
-        //float zoomDirection = zoomCtrl.currentStep > zoomCtrl.targetStep ? 1 : -1;
-        //transform.position = origin - delta * progress * zoomDirection;
-        transform.position = origin - delta * progress;
+        float zoomDirection = zoomCtrl.currentStep > zoomCtrl.targetStep ? 1 : -1;
+        transform.position = origin - delta * progress * zoomDirection;
     }
 
     void ZoomStarted()
@@ -56,13 +55,13 @@ public class PlaneAdjuster : MonoBehaviour {
         bool zoomingIn = isCurrent && zoomDirection > 0;
         bool zoomingOut = zoomDirection < 0;
 
+        origin = transform.position;
+
         if (zoomingIn) {
-            origin = transform.position;
             delta = GetPositionDelta() - origin;
         }
 
         if (zoomingOut) {
-            origin = origin0;
             delta = origin0 - origin;
         }
     }
