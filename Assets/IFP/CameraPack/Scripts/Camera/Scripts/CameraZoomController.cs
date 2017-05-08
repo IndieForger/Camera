@@ -7,18 +7,18 @@ namespace IFC.Camera
     public class CameraZoomController : CameraBaseController
     {
         // triggered when started
-        public delegate Event ZoomStartedHandler();
-        public ZoomStartedHandler ZoomStarted;
-        public delegate Event ZoomUpdatedHandler(float progress);
-        public ZoomUpdatedHandler ZoomUpdated;        
-        public delegate Event ZoomCompletedHandler();
-        public ZoomCompletedHandler ZoomCompleted;
+        public delegate void ZoomStartedHandler();
+        public event ZoomStartedHandler ZoomStarted;
+        public delegate void ZoomUpdatedHandler(float progress);
+        public event ZoomUpdatedHandler ZoomUpdated;
+        public delegate void ZoomCompletedHandler();
+        public event ZoomCompletedHandler ZoomCompleted;
 
 
         public enum UpdateMethod { DistanceFreeUpdate, DistanceClampedUpdate, DistanceStepUpdate, FOVStepUpdate }
         public UpdateMethod updateMethod = UpdateMethod.DistanceClampedUpdate;
 
-        // distance update properties        
+        // distance update properties
         public LayerMask layerMask;
         public float[] distanceSteps = { 5, 10, 40, 60 };
         public float stepTime = 1;      // time between steps
@@ -130,7 +130,7 @@ namespace IFC.Camera
         void Start()
         {
             SetupFOV();
-            switch (updateMethod) {                
+            switch (updateMethod) {
                 case UpdateMethod.DistanceStepUpdate:
                     InitDistanceStep();
                     break;
@@ -140,9 +140,6 @@ namespace IFC.Camera
         void Update()
         {
             cameraZoomDelta = CameraInputManager.Instance.GetZoomInputDelta();
-            if (cameraZoomDelta != 0) {
-                TriggerZoomStarted();
-            };
 
             switch (updateMethod)
             {
@@ -167,7 +164,7 @@ namespace IFC.Camera
         protected void TriggerZoomStarted()
         {
             //Debug.Log("----- START");
-            if (ZoomStarted != null) {              
+            if (ZoomStarted != null) {
                 ZoomStarted();
             }
         }
@@ -236,15 +233,16 @@ namespace IFC.Camera
                     return;
                 }
                 zoomDirection = zoomDelta > 0 ? 1 : -1;
-                targetStep = Mathf.Clamp(targetStep - zoomDirection, 0, distanceSteps.Length - 1);                
+                targetStep = Mathf.Clamp(targetStep - zoomDirection, 0, distanceSteps.Length - 1);
                 this.targetDistanceStep = targetStep;
+                TriggerZoomStarted();
                 return;
             }
 
             float distanceDelta = Mathf.Abs(distanceSteps[currentStep] - distanceSteps[targetStep]) / stepTime * Time.deltaTime;
             zoomDirection = currentStep > targetStep ? 1 : -1;
             
-            if (zoomDirection > 0 && this.distanceToHitPoint - distanceDelta < distanceSteps[targetStep]) {                
+            if (zoomDirection > 0 && this.distanceToHitPoint - distanceDelta < distanceSteps[targetStep]) {
                 distanceDelta = this.distanceToHitPoint - distanceSteps[targetStep];
             }
 
@@ -271,6 +269,7 @@ namespace IFC.Camera
             Debug.DrawLine(ray.origin, ray.direction + camera.transform.forward * 100, Color.red);
 
             if (cameraZoomDelta == 0) return;
+            TriggerZoomStarted();
             float distance = 100;
             Vector3 screenPoint = new Vector3(Screen.width / 2, Screen.height / 2, distance);
             Vector3 targetPoint = camera.ScreenToWorldPoint(screenPoint);
@@ -291,7 +290,7 @@ namespace IFC.Camera
         {
             Vector3 targetHitPoint = this.targetHitPoint;
             if (cameraZoomDelta == 0) return;
-
+            TriggerZoomStarted();
             float distance = Vector3.Distance(camera.transform.localPosition, targetHitPoint);
             if ((distance > minDistance && cameraZoomDelta > 0) || (distance < maxDistance && cameraZoomDelta < 0)) {
                 float distanceDelta = cameraZoomDelta * Time.deltaTime * this.distanceUpdateDelta;
@@ -341,6 +340,7 @@ namespace IFC.Camera
                 }
 
                 targetFovStep = Mathf.Clamp(targetFovStep, 0, fovSteps.Length - 1);
+                TriggerZoomStarted();
             }
 
 
