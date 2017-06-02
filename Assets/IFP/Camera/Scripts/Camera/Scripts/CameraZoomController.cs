@@ -14,7 +14,6 @@ namespace IFP.Camera
         public delegate void ZoomCompletedHandler();
         public event ZoomCompletedHandler ZoomCompleted;
 
-
         public enum UpdateMethod { DistanceFreeUpdate, DistanceClampedUpdate, DistanceStepUpdate, FOVStepUpdate }
         public UpdateMethod updateMethod = UpdateMethod.DistanceClampedUpdate;
 
@@ -22,11 +21,16 @@ namespace IFP.Camera
         public ZoomMethod zoomMethod = ZoomMethod.CameraForward;
         float rayMaxDistance = 500;
 
-        // distance update properties
         public LayerMask layerMask;
-        public float[] distanceSteps = { 5, 10, 40, 60 };
+
+        // common step properties
+        public int defaultStep = 2;
         public float stepTime = 1;      // time between steps
-        public int defaultStep = 0;
+        public float stepDampener = 1;
+        
+
+        // distance update properties
+        public float[] distanceSteps = { 5, 10, 40, 60 };        
         public float distanceSnapDelta = 0.5f;
         public float distanceUpdateDelta = 50; // the zoom speed multiplier ( ignored for step based update )   
         public float minDistance = 50; // min limit value(distance between camera and focuspoint)
@@ -37,9 +41,7 @@ namespace IFP.Camera
 
         // fov update properties
         public float[] fovSteps = { 5, 20, 60, 80 };
-        public int defaultFovStep = 2;
         public float fovSnapDelta = 0.1f;
-        public float fovUpdateDelta = 20;
 
         private int currentFovStep;
         private int targetFovStep;
@@ -189,7 +191,6 @@ namespace IFP.Camera
         /// </summary>
         protected void TriggerZoomStarted()
         {
-            //Debug.Log("----- START");
             if (ZoomStarted != null) {
                 ZoomStarted();
             }
@@ -202,7 +203,6 @@ namespace IFP.Camera
         /// <param name="progress">Progress delta</param>
         protected void TriggerZoomUpdated(float progress)
         {
-            //Debug.Log("----- " + progress);
             if (ZoomUpdated != null) {
                 ZoomUpdated(progress);
             }
@@ -213,7 +213,6 @@ namespace IFP.Camera
         /// </summary>
         protected void TriggerCompleted()
         {
-            //Debug.Log("----- END");
             if (ZoomCompleted != null) {
                 ZoomCompleted();
             }
@@ -221,14 +220,14 @@ namespace IFP.Camera
 
         void SetupFOV()
         {
-            if (defaultFovStep > fovSteps.Length - 1 || defaultFovStep < 0)
+            if (defaultStep > fovSteps.Length - 1 || defaultStep < 0)
             {
                 Debug.LogWarning("[IFC.RTSCamera.CameraZoomController()] defaultFovLevel auto set to 0");
-                defaultFovStep = 0;
+                defaultStep = 0;
             }
-            currentFovStep = defaultFovStep;
+            currentFovStep = defaultStep;
             targetFovStep = currentFovStep;
-            camera.fieldOfView = fovSteps[defaultFovStep];
+            camera.fieldOfView = fovSteps[defaultStep];
         }
 
         void InitDistanceStep()
@@ -355,10 +354,14 @@ namespace IFP.Camera
         Vector3 fovUpdateStartForwardHitpoint;
         Vector3 fovUpdateStartTargetDirection;
         Vector3 fovUpdateStartTargetHitpoint;
+        bool fovUpdateContinueLookAt = false;
+        float fovUpdateStartTime;
 
         void UpdateFovStep()
         {
-            bool recordStartHitpoint = false;            
+            bool recordStartHitpoint = false;
+            Vector3 camPosition = camera.transform.position;
+
             if (currentFovStep == targetFovStep)
             {
                 if (cameraZoomDelta < 0)
@@ -369,19 +372,37 @@ namespace IFP.Camera
                 if (cameraZoomDelta > 0)
                 {
                     targetFovStep--;
+                    fovUpdateContinueLookAt = targetFovStep <= currentFovStep; // only if zooming in
                 }
 
-                targetFovStep = Mathf.Clamp(targetFovStep, 0, fovSteps.Length - 1);              
-                TriggerZoomStarted();
+                if (cameraZoomDelta != 0) {
+                    targetFovStep = Mathf.Clamp(targetFovStep, 0, fovSteps.Length - 1);
+                    TriggerZoomStarted();
 
-                recordStartHitpoint = true;
-                fovUpdateStartForwardDirection = camera.transform.forward;
-                fovUpdateStartTargetDirection = MousePointerDirection;
+                    recordStartHitpoint = true;
+                    fovUpdateStartTime = Time.time;
+                   
+                    fovUpdateStartForwardDirection = camera.transform.forward;
+                    fovUpdateStartTargetDirection = MousePointerDirection;
+                }        
+            }
+
+            // forward ray
+            Ray forwardRay = new Ray(camPosition, camera.transform.forward);
+            RaycastHit forwardHit;
+            Vector3 forwardHitPoint = Vector3.zero;            
+            if (Physics.Raycast(forwardRay, out forwardHit, rayMaxDistance, layerMask)) {
+                forwardHitPoint = forwardHit.point;
+
+                if (recordStartHitpoint) {
+                    fovUpdateStartForwardHitpoint = forwardHitPoint;
+                }
             }
 
             if (camera.fieldOfView != fovSteps[targetFovStep])
             {
-                camera.fieldOfView = Mathf.Lerp(camera.fieldOfView, fovSteps[targetFovStep], fovUpdateDelta * Time.deltaTime);
+                float fovUpdateDelta = Mathf.Abs(fovSteps[currentFovStep] - fovSteps[targetFovStep]) / stepTime * Time.deltaTime;
+                camera.fieldOfView = Mathf.Lerp(camera.fieldOfView, fovSteps[targetFovStep], fovUpdateDelta);
 
                 float fovMin = fovSteps[targetFovStep] >= fovSteps[currentFovStep] ? fovSteps[currentFovStep] : fovSteps[targetFovStep];
                 float fovMax = fovSteps[targetFovStep] >= fovSteps[currentFovStep] ? fovSteps[targetFovStep] : fovSteps[currentFovStep];
@@ -391,48 +412,39 @@ namespace IFP.Camera
                 float fovStep = Mathf.Abs(fovSteps[targetStep] - fovSteps[currentStep]);
                 float progress = Mathf.Clamp(1 - (fovDiff / fovStep), 0, 1);
 
-                Vector3 camPosition = camera.transform.position;
-                Vector3 forwardHitPoint = Vector3.zero;
-
-                bool zoomingIn = targetFovStep < currentFovStep;
-                if (!recordStartHitpoint && zoomingIn) {                    
-                    camera.transform.LookAt(Vector3.Lerp(fovUpdateStartForwardHitpoint, fovUpdateStartTargetHitpoint, progress));
-                }
-
-                // forward ray
-                Ray forwardRay = new Ray(camPosition, camera.transform.forward);
-                RaycastHit forwardHit;
-                Color forwardLineColor = zoomMethod == ZoomMethod.ToMousePointer ? Color.yellow : Color.green;
-                if (Physics.Raycast(forwardRay, out forwardHit, rayMaxDistance, layerMask)) {                   
-                    forwardHitPoint = forwardHit.point;
-
-                    if (recordStartHitpoint) {
-                        fovUpdateStartForwardHitpoint = forwardHitPoint;
-                    }
-                }
-
                 // target ray
-                if (recordStartHitpoint && zoomMethod == ZoomMethod.ToMousePointer) {
+                if (zoomMethod == ZoomMethod.ToMousePointer) {
                     Ray targetRay = new Ray(camera.transform.position, fovUpdateStartTargetDirection);
                     RaycastHit targetHit;
                     if (Physics.Raycast(targetRay, out targetHit, rayMaxDistance, layerMask)) {
-                        fovUpdateStartTargetHitpoint = targetHit.point;
+                        if (recordStartHitpoint) { 
+                            fovUpdateStartTargetHitpoint = targetHit.point;
+                        }
                     }
+
                 }
-
-                Debug.DrawLine(camPosition, forwardHit.point, forwardLineColor);
-                Debug.DrawLine(camPosition, fovUpdateStartForwardHitpoint, Color.white);
-                Debug.DrawLine(camPosition, fovUpdateStartTargetHitpoint, Color.green);
-
+                
                 TriggerZoomUpdated(progress);
             }
-
+                    
             if (Mathf.Abs(camera.fieldOfView - fovSteps[targetFovStep]) <= fovSnapDelta)
             {
                 currentFovStep = targetFovStep;
                 if (ZoomCompleted != null) {
                     ZoomCompleted();
                 }
+            }
+
+            Color forwardLineColor = zoomMethod == ZoomMethod.ToMousePointer && fovUpdateContinueLookAt ? Color.yellow : Color.green;
+            Debug.DrawLine(camPosition, forwardHit.point, forwardLineColor);
+
+            if (fovUpdateContinueLookAt) {                
+                Debug.DrawLine(camPosition, fovUpdateStartForwardHitpoint, Color.white);
+                Debug.DrawLine(camPosition, fovUpdateStartTargetHitpoint, Color.green);
+
+                float deltaTime = (Time.time - fovUpdateStartTime) / (stepTime * stepDampener);
+                fovUpdateContinueLookAt = deltaTime < 1;
+                camera.transform.LookAt(Vector3.Lerp(fovUpdateStartForwardHitpoint, fovUpdateStartTargetHitpoint, deltaTime));                
             }
         }
     }
