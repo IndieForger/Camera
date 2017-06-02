@@ -18,6 +18,9 @@ namespace IFP.Camera
         public enum UpdateMethod { DistanceFreeUpdate, DistanceClampedUpdate, DistanceStepUpdate, FOVStepUpdate }
         public UpdateMethod updateMethod = UpdateMethod.DistanceClampedUpdate;
 
+        public enum RaycastMethod { CameraForward, ToMousePointer }
+        public RaycastMethod racastMethod = RaycastMethod.CameraForward;
+
         // distance update properties
         public LayerMask layerMask;
         public float[] distanceSteps = { 5, 10, 40, 60 };
@@ -102,7 +105,22 @@ namespace IFP.Camera
         {
             get
             {
-                Ray ray = new Ray(camera.transform.position, camera.transform.forward);
+                Vector3 direction = Vector3.zero;
+                switch(racastMethod) {
+                case RaycastMethod.ToMousePointer:
+                    var mousePos = Input.mousePosition;
+                    mousePos.z = 10; // select distance = 10 units from the camera
+                    var worldPos = camera.ScreenToWorldPoint(mousePos);
+                    direction = (worldPos - transform.position).normalized;
+                    break;
+                case RaycastMethod.CameraForward:
+                    direction = camera.transform.forward;
+                    break;
+                default:
+                    throw new System.Exception("Raycast method not assigned.");
+                }
+                
+                Ray ray = new Ray(camera.transform.position, direction);
                 float maxDistance = 1000;
                 RaycastHit hit;
                 if (Physics.Raycast(ray, out hit, maxDistance, layerMask )) {
