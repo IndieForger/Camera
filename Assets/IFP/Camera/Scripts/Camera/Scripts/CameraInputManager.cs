@@ -3,7 +3,6 @@ using IFP.Helpers;
 
 namespace IFP.Camera
 {
-
     public class CameraInputManager : MonoSingleton<CameraInputManager>
     {
         new public UnityEngine.Camera camera;
