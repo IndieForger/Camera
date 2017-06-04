@@ -6,6 +6,7 @@ namespace IFP.Camera
     {
         public enum MouseButton { None, Left, Middle, Right }
         public MouseButton mouseButton = MouseButton.Right;
+        public KeyCode comboKey = KeyCode.None;        
         public Vector2 sensitivity = new Vector2(4, 2);
 
         public bool clampXAngle = false;
@@ -38,15 +39,17 @@ namespace IFP.Camera
             
             float angleY = Input.GetAxis("Mouse X") * sensitivity.x * inversion.x;
             transform.Rotate(Vector3.up, angleY, Space.World);
-        }      
+        }
 
         bool IsLookingAround(MouseButton mouseButton)
         {
-            switch (mouseButton) {
-            case MouseButton.Left: return Input.GetMouseButton(0);
-            case MouseButton.Right: return Input.GetMouseButton(1);
-            case MouseButton.Middle: return Input.GetMouseButton(2);
-            }
+            if (comboKey == KeyCode.None || Input.GetKey(comboKey)) {
+                switch (mouseButton) {
+                case MouseButton.Left: return Input.GetMouseButton(0);
+                case MouseButton.Right: return Input.GetMouseButton(1);
+                case MouseButton.Middle: return Input.GetMouseButton(2);
+                }
+            }            
             return false;
         }
 
