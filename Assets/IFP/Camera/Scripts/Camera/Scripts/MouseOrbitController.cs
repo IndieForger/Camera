@@ -53,7 +53,7 @@ namespace IFP.Camera
             }
         }
 
-        private void LateUpdate()
+        private void Update()
         {
             if (!target) {
                 return;
@@ -82,7 +82,7 @@ namespace IFP.Camera
         {
             bool resetTrigger = comboKey == KeyCode.None || Input.GetKey(comboKey);
             float angle = Vector3.Angle(transform.forward, target.position - transform.position);
-            bool lookingAtTarget = Mathf.Abs(angle) < resetSnapAngle;
+            bool lookingAtTarget = Mathf.Abs(angle) == 0;
             bool reseting = !lookingAtTarget;
             if (reseting) {
                 if (_resetTime0 == 0 && resetTrigger) {
@@ -90,8 +90,9 @@ namespace IFP.Camera
                 }
             } else {
                 _resetTime0 = 0;
-            }            
-            return smoothLookAt && reseting && _resetTime0 != 0;
+            }
+            bool expired = Time.time - _resetTime0 > resetTime;
+            return smoothLookAt && reseting && !expired;
         }
         
         private bool CheckOribiting() 
@@ -109,11 +110,16 @@ namespace IFP.Camera
         }
 
         private void UpdateResetingRotation()
-        {
+        {            
+            Debug.Log("reseting");
             float scale = (Time.time - _resetTime0) / resetTime;
             Quaternion currentRotation = transform.rotation;
             transform.LookAt(target);
-            Quaternion targetRotation = transform.rotation;                        
+            float angle = Vector3.Angle(transform.forward, target.position - transform.position);
+            bool lookingAtTarget = Mathf.Abs(angle) > 0 && Mathf.Abs(angle) < resetSnapAngle;
+            if (!lookingAtTarget) {
+            }
+            Quaternion targetRotation = transform.rotation;
             transform.rotation = Quaternion.Lerp(currentRotation, targetRotation, scale);
         }
 
