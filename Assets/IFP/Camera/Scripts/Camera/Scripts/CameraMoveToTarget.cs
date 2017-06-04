@@ -12,6 +12,8 @@ namespace IFP.Camera
         public enum MouseButton { None, Left, Middle, Right }
         public MouseButton mouseButton = MouseButton.Left;
 
+        public KeyCode comboKey = KeyCode.None;
+
         public float doubleClickTime = 0.7f; // seconds
         public float nonDragDistance = 4; // pixels
         public float rayMaxDistance = 1000; // meters
@@ -27,6 +29,10 @@ namespace IFP.Camera
 
         void Update()
         {
+            if (comboKey != KeyCode.None && !Input.GetKey(comboKey)) {
+                return;
+            }
+
             if ((Input.GetMouseButtonDown(0) && mouseButton == MouseButton.Left) ||
                 (Input.GetMouseButtonDown(1) && mouseButton == MouseButton.Right) ||
                 (Input.GetMouseButtonDown(2) && mouseButton == MouseButton.Middle)) {
