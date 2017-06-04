@@ -15,10 +15,9 @@ namespace IFP.Camera
 
         public Transform target;
 
-        public bool smoothLookAt = true;
         public float resetTime = 0.25f;
         public float rayMaxDistance = 1000;
-        public float resetSnapAngle = 5;
+        public float lookSnapAngle = 0.2f;
         private float _resetTime0;
         private bool _reseting = false;
 
@@ -75,24 +74,25 @@ namespace IFP.Camera
                 return;
             }
 
-            UpdateOrbitalRotation();            
+            UpdateOrbitalRotation();
         }
         
         private bool CheckReseting()
         {
             bool resetTrigger = comboKey == KeyCode.None || Input.GetKey(comboKey);
             float angle = Vector3.Angle(transform.forward, target.position - transform.position);
-            bool lookingAtTarget = Mathf.Abs(angle) == 0;
+            bool lookingAtTarget = Mathf.Abs(angle) < lookSnapAngle;
+            bool expired = false;
             bool reseting = !lookingAtTarget;
             if (reseting) {
                 if (_resetTime0 == 0 && resetTrigger) {
                     _resetTime0 = Time.time;
                 }
+                expired = Time.time - _resetTime0 > resetTime;               
             } else {
                 _resetTime0 = 0;
-            }
-            bool expired = Time.time - _resetTime0 > resetTime;
-            return smoothLookAt && reseting && !expired;
+            }            
+            return reseting && !expired;
         }
         
         private bool CheckOribiting() 
@@ -110,17 +110,16 @@ namespace IFP.Camera
         }
 
         private void UpdateResetingRotation()
-        {            
-            Debug.Log("reseting");
+        {
             float scale = (Time.time - _resetTime0) / resetTime;
             Quaternion currentRotation = transform.rotation;
-            transform.LookAt(target);
             float angle = Vector3.Angle(transform.forward, target.position - transform.position);
-            bool lookingAtTarget = Mathf.Abs(angle) > 0 && Mathf.Abs(angle) < resetSnapAngle;
-            if (!lookingAtTarget) {
+            bool isLookingAtTarget = Mathf.Abs(angle) > 0 && Mathf.Abs(angle) < lookSnapAngle;
+            transform.LookAt(target);
+            if (!isLookingAtTarget) {
+                Quaternion targetRotation = transform.rotation;
+                transform.rotation = Quaternion.Lerp(currentRotation, targetRotation, scale);
             }
-            Quaternion targetRotation = transform.rotation;
-            transform.rotation = Quaternion.Lerp(currentRotation, targetRotation, scale);
         }
 
         private void UpdateOrbitalRotation()
