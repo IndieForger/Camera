@@ -3,9 +3,8 @@ using System.Collections;
 
 namespace IFP.Camera
 {
-    public class CameraPanController : CameraBaseController
+    public class CameraMoveXZController : CameraBaseController
     {
-
         public enum MoveType { None, Keyboard, ScreenBorder, Auto }
         public MoveType moveType = MoveType.Auto;
         public float internalBorder = 10;   // distance to the edge to start scrolling
