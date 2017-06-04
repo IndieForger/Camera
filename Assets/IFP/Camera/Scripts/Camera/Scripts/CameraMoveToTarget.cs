@@ -65,20 +65,24 @@ namespace IFP.Camera
 
             RaycastHit hit;
             if (shouldFindTarget && TraceTarget(out hit)) {
+                Debug.Log(hit.collider.gameObject.name + " at: " + hit.point);
                 StartTransit(hit.point);
             }
         }
 
         private void StartTransit(Vector3 point) {
             _targetPoint = point;
-            Ray forwardRay = new Ray(camera.transform.position, camera.transform.forward);
-            RaycastHit forwardHit;
-            if (Physics.Raycast(forwardRay, out forwardHit, rayMaxDistance)) {
-                Vector3 delta = forwardHit.point - camera.transform.position;
+
+            Plane plane = new Plane(-transform.forward, point);            
+            Ray ray = new Ray(transform.position, camera.transform.forward);
+            float rayDistance;            
+            if (plane.Raycast(ray, out rayDistance)) {                
+                Vector3 hitPoint = ray.GetPoint(rayDistance);
+                Vector3 delta = point - hitPoint;
                 _startPosition = camera.transform.position;
-                _targetPosition = _targetPoint - delta;
+                _targetPosition = camera.transform.position + delta;
                 _inTransit = true;
-            }
+            }            
         }
 
         private void TrasitUpdate()
@@ -122,8 +126,7 @@ namespace IFP.Camera
         private bool TraceTarget(out RaycastHit hit)
         {
             Ray ray = new Ray(camera.transform.position, MousePointerDirection);
-            if (Physics.Raycast(ray, out hit, rayMaxDistance)) {
-                Debug.Log(hit.collider.gameObject.name);
+            if (Physics.Raycast(ray, out hit, rayMaxDistance)) {                
                 return true;
             }
             return false;

@@ -51,10 +51,6 @@ namespace IFP.Camera
             if (_rigidbody != null) {
                 _rigidbody.freezeRotation = true;
             }
-
-            if (target) {
-                distance = Vector3.Distance(target.position, transform.position);
-            }
         }
 
         private void LateUpdate()
@@ -62,6 +58,8 @@ namespace IFP.Camera
             if (!target) {
                 return;
             }
+
+            distance = Vector3.Distance(target.position, transform.position);
 
             _orbiting = CheckOribiting();
             _reseting = CheckReseting();
