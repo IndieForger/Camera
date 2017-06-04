@@ -52,7 +52,7 @@ namespace IFP.Camera
             }
         }
 
-        private void Update()
+        private void LateUpdate()
         {
             if (!target) {
                 return;
