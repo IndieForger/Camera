@@ -19,6 +19,8 @@ namespace IFP.Camera
         public float rayMaxDistance = 1000; // meters
         public float transitionTime = 1; // seconds
 
+        public float defaultDistance = 0; // use current distance
+
         private Vector2 _mousePosition;
         private float _clickTime;
         private int _clicks = 0;
@@ -78,14 +80,20 @@ namespace IFP.Camera
 
         private void StartTransit(Vector3 point) {
             _targetPoint = point;
+            _startPosition = camera.transform.position;
 
+            if (defaultDistance > 0) {
+                _targetPosition = _targetPoint - camera.transform.forward * defaultDistance;
+                _inTransit = true;
+                return;
+            }
+            
             Plane plane = new Plane(-transform.forward, point);            
-            Ray ray = new Ray(transform.position, camera.transform.forward);
-            float rayDistance;            
+            Ray ray = new Ray(camera.transform.position, camera.transform.forward);
+            float rayDistance;
             if (plane.Raycast(ray, out rayDistance)) {                
                 Vector3 hitPoint = ray.GetPoint(rayDistance);
-                Vector3 delta = point - hitPoint;
-                _startPosition = camera.transform.position;
+                Vector3 delta = point - hitPoint;                
                 _targetPosition = camera.transform.position + delta;
                 _inTransit = true;
             }            
