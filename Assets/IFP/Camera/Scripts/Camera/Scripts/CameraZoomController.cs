@@ -145,12 +145,14 @@ namespace IFP.Camera
         private float cameraZoomDelta = 0;      // extracted from InputManager on update
 
         void Start()
-        {
-            SetupFOV();
+        {            
             switch (updateMethod) {
-                case UpdateMethod.DistanceStepUpdate:
-                    InitDistanceStep();
-                    break;
+            case UpdateMethod.DistanceStepUpdate:
+                InitDistanceStep();
+                break;
+            case UpdateMethod.FOVStepUpdate:
+                InitFovSettings();
+                break;
             }
         }
 
@@ -207,7 +209,7 @@ namespace IFP.Camera
             }
         }
 
-        void SetupFOV()
+        void InitFovSettings()
         {
             if (defaultStep > fovSteps.Length - 1 || defaultStep < 0)
             {
