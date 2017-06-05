@@ -13,6 +13,9 @@ namespace IFP.Camera
         public MouseButton mouseButton = MouseButton.Right;
         public KeyCode comboKey = KeyCode.LeftAlt;
 
+        public enum UpdateMethod { None, FreeUpdate, ClampedUpdate }
+        public UpdateMethod updateMethod = UpdateMethod.ClampedUpdate;
+
         public Transform target;
 
         public float resetTime = 0.25f;
@@ -20,16 +23,12 @@ namespace IFP.Camera
         public float lookSnapAngle = 0.2f;
         private float _resetTime0;
         private bool _reseting = false;
+        private float _distance;
 
-        public float distance = 5.0f;
-        public float xSpeed = 120.0f;
-        public float ySpeed = 120.0f;
+        public  float sensitivity = 1;
 
         public float yMinLimit = -20f;
         public float yMaxLimit = 80f;
-
-        public float distanceMin = .5f;
-        public float distanceMax = 15f;
 
         private bool _orbiting = false;
         private Rigidbody _rigidbody;
@@ -40,10 +39,6 @@ namespace IFP.Camera
         // Use this for initialization
         void Start()
         {
-            Vector3 angles = transform.eulerAngles;
-            x = angles.y;
-            y = angles.x;
-
             _rigidbody = GetComponent<Rigidbody>();
 
             // Make the rigid body not change rotation
@@ -58,23 +53,31 @@ namespace IFP.Camera
                 return;
             }
 
-            distance = Vector3.Distance(target.position, transform.position);
+            _distance = Vector3.Distance(target.position, transform.position);
 
             _orbiting = CheckOribiting();
-            _reseting = CheckReseting();
-
-            distance = Mathf.Clamp(distance - Input.GetAxis("Mouse ScrollWheel") * 5, distanceMin, distanceMax);
+            _reseting = CheckReseting();            
 
             if (_reseting) {
-                UpdateResetingRotation();
+                InitOrbitalRotation();
+                UpdateResetingRotation();                
                 return;
-            }           
-
+            }
+           
             if (!_orbiting) {
                 return;
             }
 
-            UpdateOrbitalRotation();
+            switch(updateMethod) {
+            case UpdateMethod.ClampedUpdate:
+                ClampedUpdateOrbitalRotation();
+                break;
+            case UpdateMethod.FreeUpdate:
+                FreeUpdateOrbitalRotation();
+                break;
+            }
+            
+           
         }
         
         private bool CheckReseting()
@@ -122,10 +125,30 @@ namespace IFP.Camera
             }
         }
 
-        private void UpdateOrbitalRotation()
-        {         
-            x += Input.GetAxis("Mouse X") * xSpeed * distance * 0.02f;
-            y -= Input.GetAxis("Mouse Y") * ySpeed * 0.02f;
+        private void InitOrbitalRotation()
+        {
+            Vector3 angles = transform.eulerAngles;
+            x = angles.y;
+            y = angles.x;
+        }
+
+        private void FreeUpdateOrbitalRotation()
+        {
+            float distance = Vector3.Distance(target.position, transform.position);
+
+            float angleY = Input.GetAxis("Mouse X") * sensitivity;
+            transform.Rotate(Vector3.up, angleY, Space.World);
+
+            float angleX = Input.GetAxis("Mouse Y") * sensitivity;
+            transform.Rotate(Vector3.left, angleX, Space.Self);
+
+            transform.position = target.position - transform.forward * distance;
+        }
+
+        private void ClampedUpdateOrbitalRotation()
+        {
+            x += Input.GetAxis("Mouse X") * sensitivity;
+            y -= Input.GetAxis("Mouse Y") * sensitivity;
 
             y = ClampAngle(y, yMinLimit, yMaxLimit);
 
@@ -133,9 +156,9 @@ namespace IFP.Camera
 
             RaycastHit hit;
             if (Physics.Linecast(target.position, transform.position, out hit)) {
-                distance -= hit.distance;
+                _distance -= hit.distance;
             }
-            Vector3 negDistance = new Vector3(0.0f, 0.0f, -distance);
+            Vector3 negDistance = new Vector3(0.0f, 0.0f, -_distance);
             Vector3 position = rotation * negDistance + target.position;
 
             transform.rotation = rotation;
