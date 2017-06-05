@@ -6,8 +6,8 @@ namespace IFP.Camera
     // Modified MouseOrbitImproved from unity wiki
     // source: http://wiki.unity3d.com/index.php?title=MouseOrbitImproved
 
-    //[AddComponentMenu("Camera-Control/Mouse Orbit with zoom")]
-    public class MouseOrbitController : MonoBehaviour
+    //[AddComponentMenu("Camera/CameraOrbitController")]
+    public class CameraOrbitController : MonoBehaviour
     {
         public enum MouseButton { None, Left, Middle, Right }
         public MouseButton mouseButton = MouseButton.Right;
