@@ -24,10 +24,10 @@ namespace IFP.Camera
             }
         }
 
-        private float _pointerTraceTime = 0;
-        private RaycastHit _tpointerTraceHit;
-        private Ray _pointerTraceRay;
-        private bool _pointerTraceFound;
+        private static float _pointerTraceTime = 0;
+        private static RaycastHit _tpointerTraceHit;
+        private static Ray _pointerTraceRay;
+        private static bool _pointerTraceFound;
 
         protected bool PointerTrace(out RaycastHit hit, float rayMaxDistance = 1000)
         {
