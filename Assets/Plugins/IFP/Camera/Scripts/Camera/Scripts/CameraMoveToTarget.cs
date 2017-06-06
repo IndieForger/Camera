@@ -1,82 +1,28 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
 namespace IFP.Camera
 {
-    public class CameraMoveToTarget : CameraBaseController
-    {
-        public enum TriggerType { None, Manual, OnClick, OnDoubleClick }
-        public TriggerType triggerType = TriggerType.OnDoubleClick;
-
-        public enum MouseButton { None, Left, Middle, Right }
-        public MouseButton mouseButton = MouseButton.Left;
-
-        public KeyCode comboKey = KeyCode.None;
-
-        public float doubleClickTime = 0.7f; // seconds
-        public float nonDragDistance = 4; // pixels
-        public float rayMaxDistance = 1000; // meters
-        public float transitionTime = 1; // seconds
-
-        public float defaultDistance = 0; // use current distance
-
-        private Vector2 _mousePosition;
-        private float _clickTime;
-        private int _clicks = 0;
+    [RequireComponent(typeof(CameraTracerController))]
+    public class CameraMoveToTarget : CameraTracerController
+    {         
         private bool _inTransit = false;
         private Vector3 _targetPoint;
         private Vector3 _targetPosition;
         private Vector3 _startPosition;
 
-        private void Update()
+        protected override void Update()
         {
-            if (comboKey != KeyCode.None && !Input.GetKey(comboKey)) {
-                return;
-            }
+            base.Update();
 
-            if ((Input.GetMouseButtonDown(0) && mouseButton == MouseButton.Left) ||
-                (Input.GetMouseButtonDown(1) && mouseButton == MouseButton.Right) ||
-                (Input.GetMouseButtonDown(2) && mouseButton == MouseButton.Middle)) {
-                OnMouseButtonDown();
-            }
-
-            if ((Input.GetMouseButtonUp(0) && mouseButton == MouseButton.Left) ||
-                (Input.GetMouseButtonUp(1) && mouseButton == MouseButton.Right) ||
-                (Input.GetMouseButtonUp(2) && mouseButton == MouseButton.Middle)) {
-                OnMouseButtonUp();
+            if (!_inTransit && IsHit) {
+                Debug.Log(HitCollider.gameObject.name + " at: " + HitPoint);
+                StartTransit(HitPoint);
             }
 
             if (_inTransit) {
                 TrasitUpdate();
-            }
-        }
-
-        private void OnMouseButtonDown()
-        {
-            _mousePosition = Input.mousePosition;
-        }
-
-        private void OnMouseButtonUp()
-        {
-            bool shouldFindTarget = false;
-            UpdateClickCount();
-
-            switch (triggerType) {
-            case TriggerType.OnClick:
-                shouldFindTarget = _clicks == 1;
-                break;
-            case TriggerType.OnDoubleClick:
-                shouldFindTarget = _clicks == 2;
-                break;
-            }
-
-            RaycastHit hit;
-            if (shouldFindTarget && PointerTrace(out hit)) {
-                Debug.Log(hit.collider.gameObject.name + " at: " + hit.point);
-                StartTransit(hit.point);
-            }
-        }
+            }                
+        }     
 
         private void StartTransit(Vector3 point) {
             _targetPoint = point;
@@ -118,23 +64,6 @@ namespace IFP.Camera
                 Camera.transform.position = _targetPosition;
                 _inTransit = false;
             }
-        }
-
-        private void UpdateClickCount()
-        {
-            if (Vector2.Distance(_mousePosition, Input.mousePosition) > nonDragDistance) {
-                _clicks = 0;
-                return;
-            }
-
-            _mousePosition = Input.mousePosition;
-            if (_clicks == 1 && _clickTime + doubleClickTime >= Time.time) {
-                _clicks++;
-            } else {
-                _clicks = 1;
-            }
-
-            _clickTime = Time.time;          
-        }            
+        }       
     }
 }
