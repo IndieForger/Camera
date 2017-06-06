@@ -19,7 +19,6 @@ namespace IFP.Camera
         public Transform target;
 
         public float resetTime = 0.25f;
-        public float rayMaxDistance = 1000;
         public float lookSnapAngle = 0.2f;
         private float _resetTime0;
         private bool _reseting = false;
