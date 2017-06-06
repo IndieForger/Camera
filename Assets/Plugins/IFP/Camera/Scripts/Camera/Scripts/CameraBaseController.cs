@@ -11,7 +11,7 @@ namespace IFP.Camera
         protected void Awake()
         {
             _camera = GetComponent<UnityEngine.Camera>();
-        } 
+        }
 
         protected Vector3 MousePointerDirection
         {
@@ -23,5 +23,32 @@ namespace IFP.Camera
                 return (worldPos - transform.position).normalized;
             }
         }
-    }
+
+        private float _pointerTraceTime = 0;
+        private RaycastHit _tpointerTraceHit;
+        private Ray _pointerTraceRay;
+        private bool _pointerTraceFound;
+
+        protected bool PointerTrace(out RaycastHit hit, float rayMaxDistance = 1000)
+        {
+            Ray ray;
+            return PointerTrace(out hit, out ray, rayMaxDistance);
+        }
+
+        protected bool PointerTrace(out RaycastHit hit, out Ray ray, float rayMaxDistance = 1000)
+        {
+            if (_pointerTraceTime == Time.time) {
+                hit = _tpointerTraceHit;
+                ray = _pointerTraceRay;
+                return _pointerTraceFound;
+            }
+            _pointerTraceFound = false;
+            _pointerTraceRay = ray = new Ray(Camera.transform.position, MousePointerDirection);
+            if (Physics.Raycast(_pointerTraceRay, out hit, rayMaxDistance)) {
+                _pointerTraceFound = true;
+                return _pointerTraceFound;
+            }
+            return _pointerTraceFound;
+        }
+    }     
 }

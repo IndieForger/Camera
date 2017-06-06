@@ -29,7 +29,7 @@ namespace IFP.Camera
         private Vector3 _targetPosition;
         private Vector3 _startPosition;
 
-        void Update()
+        private void Update()
         {
             if (comboKey != KeyCode.None && !Input.GetKey(comboKey)) {
                 return;
@@ -72,7 +72,7 @@ namespace IFP.Camera
             }
 
             RaycastHit hit;
-            if (shouldFindTarget && TraceTarget(out hit)) {
+            if (shouldFindTarget && PointerTrace(out hit)) {
                 Debug.Log(hit.collider.gameObject.name + " at: " + hit.point);
                 StartTransit(hit.point);
             }
@@ -136,14 +136,5 @@ namespace IFP.Camera
 
             _clickTime = Time.time;          
         }            
-
-        private bool TraceTarget(out RaycastHit hit)
-        {
-            Ray ray = new Ray(Camera.transform.position, MousePointerDirection);
-            if (Physics.Raycast(ray, out hit, rayMaxDistance)) {                
-                return true;
-            }
-            return false;
-        }
     }
 }
