@@ -114,13 +114,13 @@ namespace IFP.Camera
                     direction = MousePointerDirection;
                     break;
                 case ZoomMethod.CameraForward:
-                    direction = camera.transform.forward;
+                    direction = Camera.transform.forward;
                     break;
                 default:
                     throw new System.Exception("Raycast method not assigned.");
                 }
                 
-                Ray ray = new Ray(camera.transform.position, direction);             
+                Ray ray = new Ray(Camera.transform.position, direction);             
                 RaycastHit hit;
                 if (Physics.Raycast(ray, out hit, rayMaxDistance, layerMask )) {
                     Debug.DrawLine(ray.origin, hit.point, Color.green);
@@ -137,7 +137,7 @@ namespace IFP.Camera
         {
             get
             {
-                return Vector3.Distance(camera.transform.localPosition, targetHitPoint);
+                return Vector3.Distance(Camera.transform.localPosition, targetHitPoint);
             }
         }
 
@@ -218,7 +218,7 @@ namespace IFP.Camera
             }
             currentFovStep = defaultStep;
             targetFovStep = currentFovStep;
-            camera.fieldOfView = fovSteps[defaultStep];
+            Camera.fieldOfView = fovSteps[defaultStep];
         }
 
         void InitDistanceStep()
@@ -266,7 +266,7 @@ namespace IFP.Camera
                 distanceDelta = distanceSteps[targetStep] - this.distanceToHitPoint;
             }
         
-            camera.transform.localPosition = Vector3.MoveTowards(camera.transform.localPosition, targetHitPoint, distanceDelta * zoomDirection);
+            Camera.transform.localPosition = Vector3.MoveTowards(Camera.transform.localPosition, targetHitPoint, distanceDelta * zoomDirection);
 
             float distDiff = Mathf.Abs(this.distanceToHitPoint - distanceSteps[targetStep]);
             float distStep = Mathf.Abs(distanceSteps[targetStep] - distanceSteps[currentStep]);
@@ -281,23 +281,23 @@ namespace IFP.Camera
 
         void DistanceFreeUpdate()
         {
-            Ray ray = new Ray(camera.transform.position, camera.transform.forward);
-            Debug.DrawLine(ray.origin, ray.direction + camera.transform.forward * 100, Color.red);
+            Ray ray = new Ray(Camera.transform.position, Camera.transform.forward);
+            Debug.DrawLine(ray.origin, ray.direction + Camera.transform.forward * 100, Color.red);
 
             if (cameraZoomDelta == 0) return;
             TriggerZoomStarted();
             float distance = 100;
             Vector3 screenPoint = new Vector3(Screen.width / 2, Screen.height / 2, distance);
-            Vector3 targetPoint = camera.ScreenToWorldPoint(screenPoint);
+            Vector3 targetPoint = Camera.ScreenToWorldPoint(screenPoint);
             Vector3 heading = cameraZoomDelta > 0
-                ? targetPoint - camera.transform.position
-                : camera.transform.position - targetPoint;
+                ? targetPoint - Camera.transform.position
+                : Camera.transform.position - targetPoint;
             float distanceDelta = Time.deltaTime * this.distanceUpdateDelta;
-            if (manager.GetSpecial1())
+            if (Input.GetKey(KeyCode.LeftShift))
             {
                 distanceDelta *= 10;
             }
-            camera.transform.position = Vector3.MoveTowards(camera.transform.position, camera.transform.position + heading, distanceDelta);
+            Camera.transform.position = Vector3.MoveTowards(Camera.transform.position, Camera.transform.position + heading, distanceDelta);
             TriggerZoomUpdated(distanceDelta);
             TriggerCompleted();
         }
@@ -307,11 +307,11 @@ namespace IFP.Camera
             Vector3 targetHitPoint = this.targetHitPoint;
             if (cameraZoomDelta == 0) return;
             TriggerZoomStarted();
-            float distance = Vector3.Distance(camera.transform.localPosition, targetHitPoint);
+            float distance = Vector3.Distance(Camera.transform.localPosition, targetHitPoint);
             if ((distance > minDistance && cameraZoomDelta > 0) || (distance < maxDistance && cameraZoomDelta < 0)) {
                 float distanceDelta = cameraZoomDelta * Time.deltaTime * this.distanceUpdateDelta;
-                Vector3 localPosition = Vector3.MoveTowards(camera.transform.localPosition, targetHitPoint, distanceDelta);
-                camera.transform.localPosition = ClampDistance(localPosition, targetHitPoint, minDistance, maxDistance);
+                Vector3 localPosition = Vector3.MoveTowards(Camera.transform.localPosition, targetHitPoint, distanceDelta);
+                Camera.transform.localPosition = ClampDistance(localPosition, targetHitPoint, minDistance, maxDistance);
             }
 
             float distDiff = Mathf.Abs(this.distanceToHitPoint - minDistance);
@@ -351,7 +351,7 @@ namespace IFP.Camera
         void UpdateFovStep()
         {
             bool recordStartHitpoint = false;
-            Vector3 camPosition = camera.transform.position;
+            Vector3 camPosition = Camera.transform.position;
 
             if (currentFovStep == targetFovStep)
             {
@@ -373,13 +373,13 @@ namespace IFP.Camera
                     recordStartHitpoint = true;
                     fovUpdateStartTime = Time.time;
                    
-                    fovUpdateStartForwardDirection = camera.transform.forward;
+                    fovUpdateStartForwardDirection = Camera.transform.forward;
                     fovUpdateStartTargetDirection = MousePointerDirection;
                 }        
             }
 
             // forward ray
-            Ray forwardRay = new Ray(camPosition, camera.transform.forward);
+            Ray forwardRay = new Ray(camPosition, Camera.transform.forward);
             RaycastHit forwardHit;
             Vector3 forwardHitPoint = Vector3.zero;            
             if (Physics.Raycast(forwardRay, out forwardHit, rayMaxDistance, layerMask)) {
@@ -390,22 +390,22 @@ namespace IFP.Camera
                 }
             }
 
-            if (camera.fieldOfView != fovSteps[targetFovStep])
+            if (Camera.fieldOfView != fovSteps[targetFovStep])
             {
                 float fovUpdateDelta = Mathf.Abs(fovSteps[currentFovStep] - fovSteps[targetFovStep]) / stepTime * Time.deltaTime;
-                camera.fieldOfView = Mathf.Lerp(camera.fieldOfView, fovSteps[targetFovStep], fovUpdateDelta);
+                Camera.fieldOfView = Mathf.Lerp(Camera.fieldOfView, fovSteps[targetFovStep], fovUpdateDelta);
 
                 float fovMin = fovSteps[targetFovStep] >= fovSteps[currentFovStep] ? fovSteps[currentFovStep] : fovSteps[targetFovStep];
                 float fovMax = fovSteps[targetFovStep] >= fovSteps[currentFovStep] ? fovSteps[targetFovStep] : fovSteps[currentFovStep];
-                camera.fieldOfView = Mathf.Clamp(camera.fieldOfView, fovMin, fovMax);
+                Camera.fieldOfView = Mathf.Clamp(Camera.fieldOfView, fovMin, fovMax);
 
-                float fovDiff = Mathf.Abs(camera.fieldOfView - fovSteps[targetStep]);
+                float fovDiff = Mathf.Abs(Camera.fieldOfView - fovSteps[targetStep]);
                 float fovStep = Mathf.Abs(fovSteps[targetStep] - fovSteps[currentStep]);
                 float progress = Mathf.Clamp(1 - (fovDiff / fovStep), 0, 1);
 
                 // target ray
                 if (zoomMethod == ZoomMethod.ToMousePointer) {
-                    Ray targetRay = new Ray(camera.transform.position, fovUpdateStartTargetDirection);
+                    Ray targetRay = new Ray(Camera.transform.position, fovUpdateStartTargetDirection);
                     RaycastHit targetHit;
                     if (Physics.Raycast(targetRay, out targetHit, rayMaxDistance, layerMask)) {
                         if (recordStartHitpoint) { 
@@ -418,7 +418,7 @@ namespace IFP.Camera
                 TriggerZoomUpdated(progress);
             }
                     
-            if (Mathf.Abs(camera.fieldOfView - fovSteps[targetFovStep]) <= fovSnapDelta)
+            if (Mathf.Abs(Camera.fieldOfView - fovSteps[targetFovStep]) <= fovSnapDelta)
             {
                 currentFovStep = targetFovStep;
                 if (ZoomCompleted != null) {
@@ -435,7 +435,7 @@ namespace IFP.Camera
 
                 float deltaTime = (Time.time - fovUpdateStartTime) / (stepTime * stepDampener);
                 fovUpdateContinueLookAt = deltaTime < 1;
-                camera.transform.LookAt(Vector3.Lerp(fovUpdateStartForwardHitpoint, fovUpdateStartTargetHitpoint, deltaTime));                
+                Camera.transform.LookAt(Vector3.Lerp(fovUpdateStartForwardHitpoint, fovUpdateStartTargetHitpoint, deltaTime));                
             }
         }
     }

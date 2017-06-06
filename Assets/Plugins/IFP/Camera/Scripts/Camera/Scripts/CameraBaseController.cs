@@ -4,9 +4,14 @@ namespace IFP.Camera
 {
     public class CameraBaseController : MonoBehaviour
     {
-        protected new UnityEngine.Camera camera { get { return CameraInputManager.Instance.camera; } }
 
-        protected CameraInputManager manager { get { return CameraInputManager.Instance; } }
+        private UnityEngine.Camera _camera;
+        protected UnityEngine.Camera Camera { get { return _camera; } }
+
+        protected void Awake()
+        {
+            _camera = GetComponent<UnityEngine.Camera>();
+        } 
 
         protected Vector3 MousePointerDirection
         {
@@ -14,7 +19,7 @@ namespace IFP.Camera
             {
                 var mousePos = Input.mousePosition;
                 mousePos.z = 10; // select distance = 10 units from the camera
-                var worldPos = camera.ScreenToWorldPoint(mousePos);
+                var worldPos = Camera.ScreenToWorldPoint(mousePos);
                 return (worldPos - transform.position).normalized;
             }
         }

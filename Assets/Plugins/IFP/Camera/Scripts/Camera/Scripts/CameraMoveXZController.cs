@@ -41,11 +41,11 @@ namespace IFP.Camera
 
         void UpdateCameraPosition(Vector3 moveAxis, float panSpeed)
         {
-            float multiplayer = manager.GetSpecial1() ? speedMultiplayer : 1;
-            float yLock = camera.transform.position.y;
-            camera.transform.Translate(moveAxis * Time.deltaTime * panSpeed * multiplayer);
-            Vector3 position = camera.transform.position;
-            camera.transform.position = new Vector3(position.x, yLock, position.z);
+            float multiplayer = Input.GetKey(KeyCode.LeftShift) ? speedMultiplayer : 1;
+            float yLock = Camera.transform.position.y;
+            Camera.transform.Translate(moveAxis * Time.deltaTime * panSpeed * multiplayer);
+            Vector3 position = Camera.transform.position;
+            Camera.transform.position = new Vector3(position.x, yLock, position.z);
         }
 
         private bool GetEdgeMoveAxis(out Vector3 moveAxis)
@@ -84,15 +84,15 @@ namespace IFP.Camera
         {
             moveAxis = Vector3.zero;
 
-            if (Input.GetKey(manager.moveForward)) {
+            if (Input.GetKey(KeyCode.W)) {
                 moveAxis.z = 1;
-            } else if (Input.GetKey(manager.moveBack)) {
+            } else if (Input.GetKey(KeyCode.S)) {
                 moveAxis.z = -1;
             }
 
-            if (Input.GetKey(manager.moveLeft)) {
+            if (Input.GetKey(KeyCode.A)) {
                 moveAxis.x = -1;
-            } else if (Input.GetKey(manager.moveRight)) {
+            } else if (Input.GetKey(KeyCode.D)) {
                 moveAxis.x = 1;
             }
 

@@ -80,42 +80,42 @@ namespace IFP.Camera
 
         private void StartTransit(Vector3 point) {
             _targetPoint = point;
-            _startPosition = camera.transform.position;
+            _startPosition = Camera.transform.position;
 
             if (defaultDistance > 0) {
-                _targetPosition = _targetPoint - camera.transform.forward * defaultDistance;
+                _targetPosition = _targetPoint - Camera.transform.forward * defaultDistance;
                 _inTransit = true;
                 return;
             }
             
             Plane plane = new Plane(-transform.forward, point);            
-            Ray ray = new Ray(camera.transform.position, camera.transform.forward);
+            Ray ray = new Ray(Camera.transform.position, Camera.transform.forward);
             float rayDistance;
             if (plane.Raycast(ray, out rayDistance)) {                
                 Vector3 hitPoint = ray.GetPoint(rayDistance);
                 Vector3 delta = point - hitPoint;                
-                _targetPosition = camera.transform.position + delta;
+                _targetPosition = Camera.transform.position + delta;
                 _inTransit = true;
             }            
         }
 
         private void TrasitUpdate()
         {
-            Vector3 camPosition = camera.transform.position;
+            Vector3 camPosition = Camera.transform.position;
             float totalDistance = Vector3.Distance(_startPosition, _targetPosition);
             float distance = Vector3.Distance(camPosition, _targetPosition);
             float speed = totalDistance / transitionTime;
             Vector3 direction = _targetPosition - _startPosition;
-            Quaternion rotation = camera.transform.rotation;           
-            camera.transform.LookAt(_targetPosition);
-            camera.transform.Translate(Vector3.forward * speed * Time.deltaTime);
-            camera.transform.rotation = rotation;
+            Quaternion rotation = Camera.transform.rotation;           
+            Camera.transform.LookAt(_targetPosition);
+            Camera.transform.Translate(Vector3.forward * speed * Time.deltaTime);
+            Camera.transform.rotation = rotation;
             
-            camPosition = camera.transform.position;
+            camPosition = Camera.transform.position;
             bool shouldSnap = Vector3.Distance(camPosition, _targetPosition) < 0.1;
             bool movedTooFar = Vector3.Distance(camPosition, _targetPosition) > distance;
             if (shouldSnap || movedTooFar) {
-                camera.transform.position = _targetPosition;
+                Camera.transform.position = _targetPosition;
                 _inTransit = false;
             }
         }
@@ -139,7 +139,7 @@ namespace IFP.Camera
 
         private bool TraceTarget(out RaycastHit hit)
         {
-            Ray ray = new Ray(camera.transform.position, MousePointerDirection);
+            Ray ray = new Ray(Camera.transform.position, MousePointerDirection);
             if (Physics.Raycast(ray, out hit, rayMaxDistance)) {                
                 return true;
             }
