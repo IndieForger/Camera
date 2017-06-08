@@ -13,18 +13,23 @@ namespace IFP.Camera
         public MouseButton mouseButton = MouseButton.Right;
         public KeyCode comboKey = KeyCode.LeftAlt;
 
-        public enum UpdateMethod { None, FreeUpdate, ClampedUpdate }
+        public enum UpdateMethod { None, FreeUpdate, ClampedUpdate, Cinematic }
         public UpdateMethod updateMethod = UpdateMethod.ClampedUpdate;
 
         public Transform target;
+        public bool horizontal = true;
+        public bool vertical = true;
+        
 
         public float resetTime = 0.25f;
         public float lookSnapAngle = 0.2f;
+
         private float _resetTime0;
         private bool _reseting = false;
         private float _distance;
 
-        public  float sensitivity = 1;
+        public float sensitivity = 1;
+        public Vector2 autoOrbitSpeed = Vector3.zero;
 
         public float yMinLimit = -20f;
         public float yMaxLimit = 80f;
@@ -34,6 +39,8 @@ namespace IFP.Camera
 
         float x = 0.0f;
         float y = 0.0f;
+
+        public bool IsCinematic { get { return updateMethod == UpdateMethod.Cinematic; } }
 
         // Use this for initialization
         void Start()
@@ -54,7 +61,7 @@ namespace IFP.Camera
 
             _distance = Vector3.Distance(target.position, transform.position);
 
-            _orbiting = CheckOribiting();
+            _orbiting = CheckOribiting() || IsCinematic;
             _reseting = CheckReseting();            
 
             if (_reseting) {
@@ -71,9 +78,10 @@ namespace IFP.Camera
             case UpdateMethod.ClampedUpdate:
                 ClampedUpdateOrbitalRotation();
                 break;
+            case UpdateMethod.Cinematic:
             case UpdateMethod.FreeUpdate:
                 FreeUpdateOrbitalRotation();
-                break;
+                break;                           
             }
             
            
@@ -135,10 +143,15 @@ namespace IFP.Camera
         {
             float distance = Vector3.Distance(target.position, transform.position);
 
-            float angleY = Input.GetAxis("Mouse X") * sensitivity;
-            transform.Rotate(Vector3.up, angleY, Space.World);
+            float angleY = horizontal ? Input.GetAxis("Mouse X") * sensitivity : 0;
+            float angleX = vertical ? Input.GetAxis("Mouse Y") * sensitivity : 0;
 
-            float angleX = Input.GetAxis("Mouse Y") * sensitivity;
+            if (IsCinematic) {
+                angleY = autoOrbitSpeed.x;
+                angleX = autoOrbitSpeed.y;
+            }
+
+            transform.Rotate(Vector3.up, angleY, Space.World);            
             transform.Rotate(Vector3.left, angleX, Space.Self);
 
             transform.position = target.position - transform.forward * distance;
@@ -146,10 +159,11 @@ namespace IFP.Camera
 
         private void ClampedUpdateOrbitalRotation()
         {
-            x += Input.GetAxis("Mouse X") * sensitivity;
-            y -= Input.GetAxis("Mouse Y") * sensitivity;
-
-            y = ClampAngle(y, yMinLimit, yMaxLimit);
+            x += horizontal ? Input.GetAxis("Mouse X") * sensitivity : 0;
+            if (vertical) { 
+                y -= Input.GetAxis("Mouse Y") * sensitivity;
+                y = ClampAngle(y, yMinLimit, yMaxLimit);
+            }
 
             Quaternion rotation = Quaternion.Euler(y, x, 0);
 
