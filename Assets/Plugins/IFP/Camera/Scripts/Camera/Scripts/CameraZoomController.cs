@@ -47,7 +47,6 @@ namespace IFP.Camera
 
         // flags
         private bool zooming = false;
-        private bool initialized = false;
 
         // public API methods
 
@@ -124,10 +123,6 @@ namespace IFP.Camera
                     throw new System.Exception("Raycast method not assigned.");
                 }
                 
-                if (!initialized) {
-                    direction = Camera.transform.forward;
-                }
-
                 Ray ray = new Ray(Camera.transform.position, direction);             
                 RaycastHit hit;
                 if (Physics.Raycast(ray, out hit, rayMaxDistance, layerMask )) {
@@ -186,6 +181,7 @@ namespace IFP.Camera
 
         private float zoomStartTime = 0;
         private Vector3 camStartPosition;
+        private Vector3 camStartHitPoint;
 
         /// <summary>
         /// Triggered when zoom has started
@@ -194,6 +190,7 @@ namespace IFP.Camera
         {
             zoomStartTime = Time.time;
             camStartPosition = Camera.transform.position;
+            camStartHitPoint = TargetHitPoint;
             zooming = true;
 
             if (ZoomStarted != null) {
@@ -241,19 +238,13 @@ namespace IFP.Camera
 
         void InitDistanceStep()
         {
-            targetDistanceStep = defaultStep;
-
-            float closestDistance = -1;
-            int step = currentDistanceStep  = 0;
-
-            foreach (float distance in distanceSteps) {
-                bool isCloser = Mathf.Abs(DistanceToHitPoint - distance) < Mathf.Abs(DistanceToHitPoint - closestDistance);
-                if (closestDistance == -1 || isCloser) {
-                    closestDistance = distance;
-                    currentDistanceStep = step;
-                }
-                step++;
-            }            
+            bool isPointerBased = zoomMethod == ZoomMethod.ToMousePointer;
+            zoomMethod = ZoomMethod.CameraForward;
+            Camera.transform.position = TargetHitPoint - Camera.transform.forward * distanceSteps[defaultStep];
+            targetDistanceStep = currentDistanceStep = defaultStep;
+            if (isPointerBased) {
+                zoomMethod = ZoomMethod.ToMousePointer;
+            }
         }
 
         void UpdateDistanceStep()
@@ -283,11 +274,11 @@ namespace IFP.Camera
             }
             
             zoomDirection = currentStep > targetStep ? 1 : -1;
-            float startDistance = Vector3.Distance(camStartPosition, TargetHitPoint);
+            float startDistance = Vector3.Distance(camStartPosition, camStartHitPoint);
             float distanceDelta = (startDistance - distanceSteps[targetStep]) * factor;
             Vector3 direction = zoomMethod == ZoomMethod.CameraForward 
                 ? Camera.transform.forward 
-                : (TargetHitPoint - Camera.transform.position).normalized;
+                : (camStartHitPoint - camStartPosition).normalized;
             Camera.transform.position = camStartPosition + direction * distanceDelta;
 
             TriggerZoomUpdated(factor);
