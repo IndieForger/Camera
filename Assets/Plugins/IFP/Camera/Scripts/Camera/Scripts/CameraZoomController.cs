@@ -28,7 +28,6 @@ namespace IFP.Camera
         public float stepTime = 1;      // time between steps
         public float stepDampener = 1;
         
-
         // distance update properties
         public float[] distanceSteps = { 5, 10, 40, 60 };        
         public float distanceSnapDelta = 0.5f;
@@ -45,6 +44,10 @@ namespace IFP.Camera
 
         private int currentFovStep;
         private int targetFovStep;
+
+        // flags
+        private bool zooming = false;
+        private bool initialized = false;
 
         // public API methods
 
@@ -104,7 +107,8 @@ namespace IFP.Camera
             }
         }
 
-        Vector3 targetHitPoint
+        
+        Vector3 TargetHitPoint
         {
             get
             {
@@ -120,6 +124,10 @@ namespace IFP.Camera
                     throw new System.Exception("Raycast method not assigned.");
                 }
                 
+                if (!initialized) {
+                    direction = Camera.transform.forward;
+                }
+
                 Ray ray = new Ray(Camera.transform.position, direction);             
                 RaycastHit hit;
                 if (Physics.Raycast(ray, out hit, rayMaxDistance, layerMask )) {
@@ -132,12 +140,11 @@ namespace IFP.Camera
             }
         }
 
-
-        private float distanceToHitPoint
+        private float DistanceToHitPoint
         {
             get
             {
-                return Vector3.Distance(Camera.transform.localPosition, targetHitPoint);
+                return Vector3.Distance(Camera.transform.localPosition, TargetHitPoint);
             }
         }
 
@@ -177,11 +184,18 @@ namespace IFP.Camera
             }
         }
 
+        private float zoomStartTime = 0;
+        private Vector3 camStartPosition;
+
         /// <summary>
         /// Triggered when zoom has started
         /// </summary>
         protected void TriggerZoomStarted()
         {
+            zoomStartTime = Time.time;
+            camStartPosition = Camera.transform.position;
+            zooming = true;
+
             if (ZoomStarted != null) {
                 ZoomStarted();
             }
@@ -204,6 +218,10 @@ namespace IFP.Camera
         /// </summary>
         protected void TriggerCompleted()
         {
+            if (!zooming) return;
+
+            camStartPosition = Camera.transform.position;
+            zooming = false;
             if (ZoomCompleted != null) {
                 ZoomCompleted();
             }
@@ -224,56 +242,56 @@ namespace IFP.Camera
         void InitDistanceStep()
         {
             targetDistanceStep = defaultStep;
-            float closestDistance = distanceToHitPoint;
+
+            float closestDistance = -1;
             int step = currentDistanceStep  = 0;
+
             foreach (float distance in distanceSteps) {
-                if (Mathf.Abs(distanceToHitPoint - distance) < closestDistance) {
+                bool isCloser = Mathf.Abs(DistanceToHitPoint - distance) < Mathf.Abs(DistanceToHitPoint - closestDistance);
+                if (closestDistance == -1 || isCloser) {
                     closestDistance = distance;
                     currentDistanceStep = step;
                 }
                 step++;
-            }
+            }            
         }
 
         void UpdateDistanceStep()
-        {
-            float zoomDelta = CameraInputManager.Instance.GetZoomInputDelta();
-            Vector3 targetHitPoint = this.targetHitPoint;
+        {                       
             int currentStep = currentDistanceStep;
             int targetStep = targetDistanceStep;
             int zoomDirection = 0;  // 1 -> zooming in, -1 -> zooming out
 
-            if (currentStep == targetStep) 
-            {
-                if (zoomDelta == 0) {
-                    return;
-                }
-                zoomDirection = zoomDelta > 0 ? 1 : -1;
-                targetStep = Mathf.Clamp(targetStep - zoomDirection, 0, distanceSteps.Length - 1);
-                this.targetDistanceStep = targetStep;
-                TriggerZoomStarted();
+            if (currentStep == targetStep && cameraZoomDelta == 0) {
                 return;
             }
 
-            float distanceDelta = Mathf.Abs(distanceSteps[currentStep] - distanceSteps[targetStep]) / stepTime * Time.deltaTime;
-            zoomDirection = currentStep > targetStep ? 1 : -1;
+            if (cameraZoomDelta != 0) {
+                zoomDirection = cameraZoomDelta > 0 ? 1 : -1;
+                targetStep = Mathf.Clamp(targetStep - zoomDirection, 0, distanceSteps.Length - 1);
+                this.targetDistanceStep = targetStep;
+
+                TriggerZoomStarted();
+            }
+
+            float factor = 0;
+            if (Time.time - zoomStartTime <= stepTime) {
+                factor = (float) EaseInOut(Time.time - zoomStartTime, 0, 1, stepTime);
+            } else if (Time.time - zoomStartTime > stepTime) {
+                factor = 1;
+                Debug.LogWarning("Oh snap! Factor shouldn't ever be 1");
+            }
             
-            if (zoomDirection > 0 && this.distanceToHitPoint - distanceDelta < distanceSteps[targetStep]) {
-                distanceDelta = this.distanceToHitPoint - distanceSteps[targetStep];
-            }
+            zoomDirection = currentStep > targetStep ? 1 : -1;
+            float startDistance = Vector3.Distance(camStartPosition, TargetHitPoint);
+            float distanceDelta = (startDistance - distanceSteps[targetStep]) * factor;
+            Vector3 direction = zoomMethod == ZoomMethod.CameraForward 
+                ? Camera.transform.forward 
+                : (TargetHitPoint - Camera.transform.position).normalized;
+            Camera.transform.position = camStartPosition + direction * distanceDelta;
 
-            if (zoomDirection < 0 && this.distanceToHitPoint + distanceDelta > distanceSteps[targetStep]) {
-                distanceDelta = distanceSteps[targetStep] - this.distanceToHitPoint;
-            }
-        
-            Camera.transform.localPosition = Vector3.MoveTowards(Camera.transform.localPosition, targetHitPoint, distanceDelta * zoomDirection);
-
-            float distDiff = Mathf.Abs(this.distanceToHitPoint - distanceSteps[targetStep]);
-            float distStep = Mathf.Abs(distanceSteps[targetStep] - distanceSteps[currentStep]);
-            float progress = Mathf.Clamp(1 - (distDiff / distStep), 0, 1);
-            TriggerZoomUpdated(progress);            
-
-            if (Mathf.Abs(distanceToHitPoint - distanceSteps[targetDistanceStep]) <= distanceSnapDelta) {
+            TriggerZoomUpdated(factor);
+            if (factor > 0.999) {
                 currentDistanceStep = targetDistanceStep;
                 TriggerCompleted();
             }
@@ -304,7 +322,7 @@ namespace IFP.Camera
 
         void DistanceClampedUpdate()
         {
-            Vector3 targetHitPoint = this.targetHitPoint;
+            Vector3 targetHitPoint = this.TargetHitPoint;
             if (cameraZoomDelta == 0) return;
             TriggerZoomStarted();
             float distance = Vector3.Distance(Camera.transform.localPosition, targetHitPoint);
@@ -314,7 +332,7 @@ namespace IFP.Camera
                 Camera.transform.localPosition = ClampDistance(localPosition, targetHitPoint, minDistance, maxDistance);
             }
 
-            float distDiff = Mathf.Abs(this.distanceToHitPoint - minDistance);
+            float distDiff = Mathf.Abs(this.DistanceToHitPoint - minDistance);
             float distStep = Mathf.Abs(maxDistance - minDistance);
             float progress = Mathf.Clamp(1 - (distDiff / distStep), 0, 1);
             TriggerZoomUpdated(progress);
@@ -437,6 +455,11 @@ namespace IFP.Camera
                 fovUpdateContinueLookAt = deltaTime < 1;
                 Camera.transform.LookAt(Vector3.Lerp(fovUpdateStartForwardHitpoint, fovUpdateStartTargetHitpoint, deltaTime));                
             }
+        }
+
+        public static double EaseInOut(double t, double b, double c, double d)
+        {
+            return -c / 2 * (System.Math.Cos(System.Math.PI * t / d) - 1) + b;
         }
     }
 }
