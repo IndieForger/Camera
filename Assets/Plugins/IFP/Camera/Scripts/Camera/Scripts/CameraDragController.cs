@@ -2,7 +2,12 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class CameraMoveXYController : MonoBehaviour {
+public class CameraDragController : MonoBehaviour {
+
+    public enum Axis { None, MouseX, MouseY }
+    public Axis axisX = Axis.MouseX;
+    public Axis axisY = Axis.MouseY;
+    public Axis axisZ = Axis.None;
 
     public enum MouseButton { None, Left, Middle, Right }
     public MouseButton mouseButton = MouseButton.Left;
@@ -42,8 +47,12 @@ public class CameraMoveXYController : MonoBehaviour {
     private void UpdatePosition()
     {        
         Vector2 currentMousePosition = Input.mousePosition;       
-        Vector2 delta = (_lastMousePositon - currentMousePosition) * sensitivity;        
-        //Vector3 position = transform.localPosition;
+        Vector2 delta = (_lastMousePositon - currentMousePosition) * sensitivity;
+
+        float dx = axisX == Axis.MouseX ? delta.x : axisX == Axis.MouseY ? delta.y : 0;
+        float dy = axisY == Axis.MouseX ? delta.x : axisY == Axis.MouseY ? delta.y : 0;
+        float dz = axisZ == Axis.MouseX ? delta.x : axisZ == Axis.MouseY ? delta.y : 0;
+
         Vector3 distance = new Vector3(delta.x, delta.y, 0);
         //Debug.Log(distance);
         transform.Translate(distance, Space.Self);
