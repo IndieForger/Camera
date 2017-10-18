@@ -35,8 +35,7 @@ public class CameraDragController : MonoBehaviour {
             (mouseButton == MouseButton.Middle && Input.GetMouseButton(2))
         ) {
             UpdatePosition();
-        }
-
+        }        
     }
 
     private void ResetPositionUpdate()
@@ -47,14 +46,15 @@ public class CameraDragController : MonoBehaviour {
     private void UpdatePosition()
     {        
         Vector2 currentMousePosition = Input.mousePosition;       
-        Vector2 delta = (_lastMousePositon - currentMousePosition) * sensitivity;
+        Vector2 delta = (_lastMousePositon - currentMousePosition);
 
         float dx = axisX == Axis.MouseX ? delta.x : axisX == Axis.MouseY ? delta.y : 0;
         float dy = axisY == Axis.MouseX ? delta.x : axisY == Axis.MouseY ? delta.y : 0;
         float dz = axisZ == Axis.MouseX ? delta.x : axisZ == Axis.MouseY ? delta.y : 0;
 
-        Vector3 distance = new Vector3(delta.x, delta.y, 0);
-        //Debug.Log(distance);
+        Vector3 distance = new Vector3(dx, dy, dz) * sensitivity * Time.deltaTime;
+
+        Debug.Log(distance);
         transform.Translate(distance, Space.Self);
         //transform.localPosition = position + distance;
         _lastMousePositon = currentMousePosition;
