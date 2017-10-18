@@ -41,13 +41,16 @@ namespace IFP.Camera
                 value = 0.3f;
             }
 
+
+            return Input.GetAxis("Mouse ScrollWheel");
+            /*
             if (Input.GetAxis("Mouse ScrollWheel") < 0) {
                 value = -1;
             } else if (Input.GetAxis("Mouse ScrollWheel") > 0) {
                 value = 1;
             }
-
             return value;
+            */
         }
     }
 }

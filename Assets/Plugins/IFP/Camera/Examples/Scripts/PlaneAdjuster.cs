@@ -7,17 +7,15 @@ namespace IFP.Camera.Examples
 {
     public class PlaneAdjuster : MonoBehaviour
     {
-
         public CameraZoomController zoomCtrl;
         public float step = 0;
 
-        // todo: should be readonly
-        private CameraZoomController.UpdateMethod method = CameraZoomController.UpdateMethod.DistanceStepUpdate;
+        public CameraZoomController.UpdateMethod ZoomMethod { get { return CameraZoomController.UpdateMethod.DistanceStepUpdate; } }
 
-        private bool shouldZoom { get { return shouldListen && shouldReact; } }
-        private bool shouldReact { get { return shouldTrace || zoomCtrl.currentStep == step - 1; } }
-        private bool shouldTrace { get { return zoomCtrl.currentStep == step; } }
-        private bool shouldListen { get { return zoomCtrl.updateMethod == method; } }
+        private bool ShouldZoom { get { return ShouldListen && ShouldReact; } }
+        private bool ShouldReact { get { return ShouldTrace || zoomCtrl.currentStep == step - 1; } }
+        private bool ShouldTrace { get { return zoomCtrl.currentStep == step; } }
+        private bool ShouldListen { get { return zoomCtrl.updateMethod == ZoomMethod; } }
 
         private Vector3 delta = Vector3.zero;
         private Vector3 origin = Vector3.zero;
@@ -38,25 +36,25 @@ namespace IFP.Camera.Examples
 
         private void Update()
         {
-            if (!shouldTrace) return;
+            if (!ShouldTrace) return;
             GetPositionDelta();
         }
 
         void ZoomUpdated(float progress)
         {
-            if (!shouldZoom) return;
+            if (!ShouldZoom) return;
             float zoomDirection = zoomCtrl.currentStep > zoomCtrl.targetStep ? 1 : -1;
-            transform.position = origin - delta * progress * zoomDirection;
+            Vector3 position = origin - delta * progress * zoomDirection;
+            transform.position = new Vector3(position.x, transform.position.y, position.z);
         }
 
         void ZoomStarted()
         {
-            if (!shouldZoom) return;
-
+            if (!ShouldZoom) return;
+            
             float zoomDirection = zoomCtrl.currentStep > zoomCtrl.targetStep ? 1 : -1;
 
-            bool isCurrent = zoomCtrl.currentStep == step;
-            bool zoomingIn = isCurrent && zoomDirection > 0;
+            bool zoomingIn = zoomCtrl.currentStep == step && zoomDirection > 0;
             bool zoomingOut = zoomDirection < 0;
 
             origin = transform.position;
