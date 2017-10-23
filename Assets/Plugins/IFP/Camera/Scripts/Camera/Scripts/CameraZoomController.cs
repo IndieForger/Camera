@@ -34,6 +34,7 @@ namespace IFP.Camera
         public float distanceUpdateDelta = 50; // the zoom speed multiplier ( ignored for step based update )   
         public float minDistance = 50; // min limit value(distance between camera and focuspoint)
         public float maxDistance = 100; // max limit value(distance between camera and focuspoint)
+        public bool resetRotation = false;
 
         private int currentDistanceStep;
         private int targetDistanceStep;
@@ -44,6 +45,15 @@ namespace IFP.Camera
 
         private int currentFovStep;
         private int targetFovStep;
+
+        // registered values
+        private float zoomStartTime = 0;
+        private Vector3 camLastPosition;
+        private Vector3 camLastHitPoint;
+        private Vector3 camStartPosition;
+        private Quaternion camStartRotation;
+        private Vector3 camStartForward;
+
 
         // flags
         private bool zooming = false;
@@ -147,7 +157,11 @@ namespace IFP.Camera
         private float cameraZoomDelta = 0;      // extracted from InputManager on update
 
         void Start()
-        {            
+        {
+            camStartPosition = Camera.transform.position;
+            camStartRotation = Camera.transform.rotation;
+            camStartForward = Camera.transform.forward;
+
             switch (updateMethod) {
             case UpdateMethod.DistanceStepUpdate:
                 InitDistanceStep();
@@ -179,9 +193,7 @@ namespace IFP.Camera
             }
         }
 
-        private float zoomStartTime = 0;
-        private Vector3 camStartPosition;
-        private Vector3 camStartHitPoint;
+
 
         /// <summary>
         /// Triggered when zoom has started
@@ -189,8 +201,8 @@ namespace IFP.Camera
         protected void TriggerZoomStarted()
         {
             zoomStartTime = Time.time;
-            camStartPosition = Camera.transform.position;
-            camStartHitPoint = TargetHitPoint;
+            camLastPosition = Camera.transform.position;
+            camLastHitPoint = TargetHitPoint;
             zooming = true;
 
             if (ZoomStarted != null) {
@@ -217,7 +229,7 @@ namespace IFP.Camera
         {
             if (!zooming) return;
 
-            camStartPosition = Camera.transform.position;
+            camLastPosition = Camera.transform.position;
             zooming = false;
             if (ZoomCompleted != null) {
                 ZoomCompleted();
@@ -274,12 +286,18 @@ namespace IFP.Camera
             }
             
             zoomDirection = currentStep > targetStep ? 1 : -1;
-            float startDistance = Vector3.Distance(camStartPosition, camStartHitPoint);
+            float startDistance = Vector3.Distance(camLastPosition, camLastHitPoint);
             float distanceDelta = (startDistance - distanceSteps[targetStep]) * factor;
+
             Vector3 direction = zoomMethod == ZoomMethod.CameraForward 
                 ? Camera.transform.forward 
-                : (camStartHitPoint - camStartPosition).normalized;
-            Camera.transform.position = camStartPosition + direction * distanceDelta;
+                : (camLastHitPoint - camLastPosition).normalized;
+
+            if (resetRotation) {
+                Camera.transform.rotation = Quaternion.Lerp(Camera.transform.rotation, camStartRotation, factor);
+            }
+
+            Camera.transform.position = camLastPosition + direction * distanceDelta;
 
             TriggerZoomUpdated(factor);
             if (factor > 0.999) {
